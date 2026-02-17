@@ -1,13 +1,24 @@
 package agent
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type ClaudeAdapter struct {
-	APIKey string
+	APIKey   string
+	Registry *CapabilityRegistry
 }
 
-func NewClaudeAdapter(apiKey string) *ClaudeAdapter {
-	return &ClaudeAdapter{APIKey: apiKey}
+func NewClaudeAdapter(apiKey, registryPath string) *ClaudeAdapter {
+	reg := NewCapabilityRegistry(registryPath)
+	if err := reg.Load(); err != nil {
+		fmt.Printf("Warning: Failed to load capabilities: %v\n", err)
+	}
+	return &ClaudeAdapter{
+		APIKey:   apiKey,
+		Registry: reg,
+	}
 }
 
 func (a *ClaudeAdapter) Name() string {
@@ -16,9 +27,12 @@ func (a *ClaudeAdapter) Name() string {
 
 func (a *ClaudeAdapter) SendPrompt(ctx context.Context, prompt string) (string, error) {
 	// TODO: Implement Claude API call
-	return "Thinking...", nil
+	return "Thinking with Claude...", nil
 }
 
 func (a *ClaudeAdapter) ExecuteIntent(ctx context.Context, intent string) (string, error) {
-	return "troncli help", nil
+	if !a.Registry.IsIntentAllowed(intent) {
+		return "", fmt.Errorf("intent '%s' is not allowed by policy", intent)
+	}
+	return fmt.Sprintf("Executing allowed intent via Claude: %s", intent), nil
 }
