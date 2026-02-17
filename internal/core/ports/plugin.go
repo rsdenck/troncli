@@ -9,6 +9,7 @@ type Plugin struct {
 
 type PluginManager interface {
 	ListPlugins() ([]Plugin, error)
-	InstallPlugin(urlOrPath string) error
+	InstallPlugin(nameOrUrl string) error
 	RemovePlugin(name string) error
+	ExecutePlugin(name string, args []string) error
 }

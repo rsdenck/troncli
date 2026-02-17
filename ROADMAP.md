@@ -36,9 +36,74 @@ Nossa visão é construir uma TUI unificada e de nível empresarial que centrali
 - [x] **Gestão de Serviços Multi-Init**: Abstração para `systemd`, `service`, `rc-service`, `runit` (start, enable, status).
 - [x] **Modo Doctor Multi-Distro**: Checks universais de saúde (Load, Swap, TCP, Disco, Kernel, Permissões).
 - [x] **Compatibilidade de Ambientes**: Adaptação para WSL, Docker, Kubernetes Node, VM, Bare Metal.
-- [ ] **Sistema de Plugins**: Instalação de plugins específicos por distro (`troncli plugin install arch`).
+- [x] **Sistema de Plugins**: Instalação de plugins específicos por distro (`troncli plugin install arch`).
 
-## Fase 5: Polimento e Distribuição
+## Fase 5: Integração de IA e Agentes (Novo)
+
+#### TRONCLI
+🧠 O agent pensa
+🛠 A troncli executa
+🔐 O sistema continua determinístico e auditável
+
+### 1️⃣ Modelo de Integração
+- A troncli vira o **Runtime Executor** oficial, e os agents viram:
+  - 🔌 **Plugins**
+  - 🤖 **Copilots**
+  - 🧠 **Reasoning Engines**
+
+### Estrutura Sugerida
+```bash
+troncli
+ ├── core/
+ ├── modules/
+ ├── executor/
+ ├── agent/
+ │     ├── ollama_adapter.go
+ │     ├── claude_adapter.go
+ │     ├── openai_adapter.go
+ │     └── local_agent.go
+ └── plugins/
+```
+
+### Exemplos de Uso
+```bash
+troncli agent "instalar nginx e liberar porta 80"
+troncli agent enable ollama
+troncli agent set-model llama3
+troncli agent ask "auditar segurança do sistema"
+troncli ai install docker
+troncli ai harden ssh
+```
+
+### Agent Capability Registry
+Definição segura de permissões em `/agent/capabilities.yaml`:
+```yaml
+allowed_intents:
+  - install_package
+  - remove_package
+  - open_firewall
+  - audit_security
+  - network_config
+```
+
+### Arquitetura em Camadas
+```
+[ User ]
+    ↓
+[ TronCLI ]
+    ↓
+[ Agent Adapter ]
+    ↓
+[ Intent Validator ]
+    ↓
+[ Universal Modules ]
+    ↓
+[ Executor ]
+    ↓
+[ Linux System ]
+```
+
+## Fase 6: Polimento e Distribuição
 - [ ] **Documentação**: Man pages, Wiki.
 - [ ] **Empacotamento**: DEB, RPM, AUR, Snap.
 - [ ] **Temas**: Esquemas de cores personalizados (Cyberpunk, Matrix).
