@@ -84,7 +84,15 @@ _"Building systems that do not wake people up at 3 AM."_
 
 </div>
 
-### Installation
+### Installation (Bash)
+
+To install the latest version automatically:
+
+```bash
+curl -sS https://raw.githubusercontent.com/rsdenck/troncli/main/setup-tron.sh | bash
+```
+
+### Manual Installation
 
 ```bash
 git clone https://github.com/rsdenck/troncli.git
