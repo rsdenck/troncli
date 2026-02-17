@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.png" width="100%" alt="TRONCLI" />
+<img src="assets/banner.svg" width="100%" alt="TRONCLI" />
 
 <table>
 <tr>
