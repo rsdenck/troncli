@@ -1,33 +1,33 @@
-# Security Policy
+# Política de Segurança
 
-## Supported Versions
+## Versões Suportadas
 
-Only the latest stable release of `troncli` is supported for security updates.
+Apenas a versão estável mais recente do `troncli` recebe atualizações de segurança.
 
-| Version | Supported          |
+| Versão | Suportado          |
 | ------- | ------------------ |
 | Latest  | :white_check_mark: |
 | < 1.0   | :x:                |
 
-## Reporting a Vulnerability
+## Reportando uma Vulnerabilidade
 
-**DO NOT** report security vulnerabilities through public GitHub issues.
+**NÃO** relate vulnerabilidades de segurança através de issues públicas no GitHub.
 
-If you believe you have found a security vulnerability in `troncli`, please report it directly to the maintainers via email at: `security@example.com` (Replace with actual email).
+Se você acredita ter encontrado uma vulnerabilidade de segurança no `troncli`, por favor, utilize a funcionalidade de **Private Vulnerability Reporting** do GitHub neste repositório, ou entre em contato diretamente com os mantenedores.
 
-### Process
+### Processo
 
-1.  **Report**: You report the vulnerability privately.
-2.  **Ack**: We acknowledge receipt within 48 hours.
-3.  **Investigate**: We investigate the issue and determine the impact.
-4.  **Fix**: We develop a fix and test it.
-5.  **Release**: We release a patched version.
-6.  **Disclose**: We publicly disclose the vulnerability after the fix is available.
+1.  **Relato**: Você reporta a vulnerabilidade de forma privada.
+2.  **Confirmação**: Confirmamos o recebimento em até 48 horas.
+3.  **Investigação**: Investigamos o problema e determinamos o impacto.
+4.  **Correção**: Desenvolvemos uma correção e testamos.
+5.  **Release**: Lançamos uma versão corrigida.
+6.  **Divulgação**: Divulgamos publicamente a vulnerabilidade após a correção estar disponível.
 
-## Supply Chain Security
+## Segurança da Cadeia de Suprimentos
 
-We take supply chain security seriously.
-- All releases are signed with Cosign.
-- SBOMs are generated for every release (CycloneDX).
-- Dependencies are scanned nightly.
-- CI/CD pipelines are pinned by SHA.
+Levamos a segurança da cadeia de suprimentos a sério.
+- Todos os releases são assinados com Cosign.
+- SBOMs são gerados para cada release (CycloneDX).
+- Dependências são escaneadas diariamente.
+- Pipelines de CI/CD são pinados por SHA.
