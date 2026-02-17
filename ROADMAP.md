@@ -1,33 +1,33 @@
-# TRONCLI ROADMAP
+# ROADMAP TRONCLI
 
-> "The most complete tool ever created for Linux Sysadmins."
+> "A ferramenta mais completa já criada para Sysadmins Linux."
 
-Our vision is to build a unified, enterprise-grade TUI that centralizes all critical Linux administration tasks.
-
----
-
-## Phase 1: Foundation (Current)
-- [x] **Project Structure**: Clean Architecture implementation.
-- [x] **CI/CD Pipeline**: Full GitHub Actions workflow.
-- [x] **Core Modules**: System, Disk, Network, Users.
-- [x] **TUI Framework**: tview/tcell integration with TRON theme.
-
-## Phase 2: Deep Kernel Integration
-- [ ] **LVM Manager**: Create/Resize PVs, VGs, LVs.
-- [ ] **Audit System**: Parse `/var/log/auth.log` and systemd journal.
-- [ ] **Network Analysis**: Socket statistics (ss), nftables integration.
-- [ ] **Process Killer**: Interactive kill/renice.
-
-## Phase 3: Enterprise Features
-- [ ] **Remote Management**: SSH Tunnels, rsd-sshm integration.
-- [ ] **Container Management**: Podman/Docker TUI.
-- [ ] **Systemd Units**: Start/Stop/Enable/Edit services.
-- [ ] **Cron/Timers**: Schedule management.
-
-## Phase 4: Final Polish
-- [ ] **Documentation**: Man pages, Wiki.
-- [ ] **Packaging**: DEB, RPM, AUR, Snap.
-- [ ] **Themes**: Custom color schemes (Cyberpunk, Matrix).
+Nossa visão é construir uma TUI unificada e de nível empresarial que centralize todas as tarefas críticas de administração Linux.
 
 ---
-TRONCLI | FUTURE EXECUTION
+
+## Fase 1: Fundação (Atual)
+- [x] **Estrutura do Projeto**: Implementação da Clean Architecture.
+- [x] **Pipeline CI/CD**: Workflow completo do GitHub Actions.
+- [x] **Módulos Principais**: Sistema, Disco, Rede, Usuários.
+- [x] **Framework TUI**: Integração tview/tcell com tema TRON.
+
+## Fase 2: Integração Profunda com Kernel
+- [ ] **Gerenciador LVM**: Criar/Redimensionar PVs, VGs, LVs.
+- [ ] **Sistema de Auditoria**: Parsear `/var/log/auth.log` e systemd journal.
+- [ ] **Análise de Rede**: Estatísticas de soquetes (ss), integração nftables.
+- [ ] **Matador de Processos**: Kill/renice interativo.
+
+## Fase 3: Recursos Empresariais
+- [ ] **Gerenciamento Remoto**: Túneis SSH, integração rsd-sshm.
+- [ ] **Gerenciamento de Containers**: TUI para Podman/Docker.
+- [ ] **Unidades Systemd**: Iniciar/Parar/Habilitar/Editar serviços.
+- [ ] **Cron/Timers**: Gerenciamento de agendamentos.
+
+## Fase 4: Polimento Final
+- [ ] **Documentação**: Man pages, Wiki.
+- [ ] **Empacotamento**: DEB, RPM, AUR, Snap.
+- [ ] **Temas**: Esquemas de cores personalizados (Cyberpunk, Matrix).
+
+---
+TRONCLI | EXECUÇÃO FUTURA
