@@ -1,504 +1,135 @@
-# TRONCLI Command Reference
-
-Generated on Tue, 17 Feb 2026 07:56:03 -03
-
-## Main Help
-```
-TRONCLI is a production-grade Linux tool for system administration.
-It features a TUI (Terminal User Interface) and a comprehensive CLI for automation.
-
-Usage:
-  troncli [flags]
-  troncli [command]
-
-Available Commands:
-  audit       Auditoria de Segurança
-  bash        Executar comandos e scripts Bash
-  completion  Gerar scripts de autocompletar para shell
-  container   Gerenciar containers (Docker/Podman)
-  disk        Gerenciamento de Disco
-  doctor      Saúde do Sistema
-  firewall    Gerenciamento de Firewall
-  group       Gerenciamento de Grupos
-  help        Help about any command
-  network     Gerenciamento de Rede
-  pkg         Gerenciador de Pacotes Universal
-  plugin      Gerenciar plugins do TRONCLI
-  process     Gerenciamento de Processos do Sistema
-  remote      Gerenciar conexões remotas SSH
-  service     Gerenciar serviços do sistema
-  system      Informações e Perfil do Sistema
-  user        Gerenciamento de Usuários e Grupos
-
-Flags:
-      --dry-run       Simulate execution without making changes
-  -h, --help          help for troncli
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli [command] --help" for more information about a command.
-```
-
-## Subcommands
-### audit
-```
-Ferramentas para auditoria de segurança, logs e integridade do sistema.
-
-Usage:
-  troncli audit [command]
-
-Available Commands:
-  commands     Lista comandos executados (via sudo/logs)
-  file-changes Monitora alterações recentes em arquivos
-  logins       Lista histórico de logins
-  sudoers      Lista usuários com privilégios sudo
-
-Flags:
-  -h, --help   help for audit
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli audit [command] --help" for more information about a command.
-```
-
-### bash
-```
-Executa comandos Bash diretamente ou scripts de arquivos, gerenciando permissões e execução.
-
-Usage:
-  troncli bash [command]
-
-Available Commands:
-  run         Executar um comando Bash
-  script      Executar um script Bash de arquivo
-
-Flags:
-  -h, --help   help for bash
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli bash [command] --help" for more information about a command.
-```
-
-### completion
-```
-Para carregar o autocompletar:
-
-Bash:
-  $ source <(troncli completion bash)
-
-Zsh:
-  # Se o autocompletar do shell não estiver ativado, adicione ao .zshrc:
-  # autoload -U compinit; compinit
-  $ source <(troncli completion zsh)
-
-Fish:
-  $ troncli completion fish | source
-
-PowerShell:
-  PS> troncli completion powershell | Out-String | Invoke-Expression
-
-Usage:
-  troncli completion [bash|zsh|fish|powershell]
-
-Flags:
-  -h, --help   help for completion
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-```
-
-### container
-```
-Gerenciar ciclo de vida de containers, suportando Docker e Podman automaticamente.
-
-Usage:
-  troncli container [command]
-
-Available Commands:
-  list        Listar containers
-  logs        Ver logs de um container
-  start       Iniciar um container
-  stop        Parar um container
-
-Flags:
-  -h, --help   help for container
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli container [command] --help" for more information about a command.
-```
-
-### disk
-```
-Gerencie discos, partições, e uso de espaço (usage, cleanup, health).
-
-Usage:
-  troncli disk [command]
-
-Available Commands:
-  cleanup     Limpa arquivos temporários e caches
-  health      Verifica saúde do disco
-  inodes      Exibe uso de inodes
-  top-files   Lista maiores arquivos
-  usage       Exibe uso do disco
-
-Flags:
-  -h, --help   help for disk
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli disk [command] --help" for more information about a command.
-```
-
-### doctor
-```
-Executa verificações de saúde do sistema (Load, Swap, Disco, TCP, etc).
-
-Usage:
-  troncli doctor [flags]
-
-Flags:
-      --disk       Executa verificações de disco
-      --full       Executa todas as verificações
-  -h, --help       help for doctor
-      --network    Executa verificações de rede
-      --security   Executa verificações de segurança
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-```
-
-### firewall
-```
-Controlar regras de firewall (ufw, firewalld, iptables, nftables).
-
-Usage:
-  troncli firewall [command]
-
-Available Commands:
-  allow       Permitir tráfego na porta
-  deny        Bloquear tráfego na porta
-  disable     Desabilitar firewall
-  enable      Habilitar firewall
-  list        Listar regras de firewall
-
-Flags:
-  -h, --help   help for firewall
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli firewall [command] --help" for more information about a command.
-```
-
-### group
-```
-Gerenciamento de Grupos
-
-Usage:
-  troncli group [command]
-
-Available Commands:
-  add         Adicionar grupo
-  del         Remover grupo
-  list        Listar grupos
-
-Flags:
-  -h, --help   help for group
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli group [command] --help" for more information about a command.
-```
-
-### network
-```
-Gerencie interfaces, rotas, DNS e configurações de rede.
-
-Usage:
-  troncli network [command]
-
-Available Commands:
-  capture     Capturar pacotes (tcpdump)
-  dig         Consultar DNS (dig)
-  info        Informações detalhadas de rede
-  scan        Escanear portas (nmap)
-  set-state   Alterar estado da interface
-  sockets     Listar sockets abertos (ss)
-  trace       Executar traceroute
-
-Flags:
-  -h, --help   help for network
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli network [command] --help" for more information about a command.
-```
-
-### pkg
-```
-Instala, remove e gerencia pacotes de forma transparente em apt, dnf, yum, pacman, apk e zypper.
-
-Usage:
-  troncli pkg [command]
-
-Available Commands:
-  install     Instala um pacote
-  remove      Remove um pacote
-  search      Pesquisa por pacotes
-  update      Atualiza a lista de pacotes
-  upgrade     Atualiza todos os pacotes do sistema
-
-Flags:
-  -h, --help   help for pkg
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli pkg [command] --help" for more information about a command.
-```
-
-### plugin
-```
-Instalar, listar e remover plugins (scripts ou binários) do TRONCLI.
-
-Usage:
-  troncli plugin [command]
-
-Available Commands:
-  install     Instalar um plugin
-  list        Listar plugins instalados
-  remove      Remover um plugin
-
-Flags:
-  -h, --help   help for plugin
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli plugin [command] --help" for more information about a command.
-```
-
-### process
-```
-Visualiza, finaliza e gerencia prioridade de processos em execução.
-
-Usage:
-  troncli process [command]
-
-Available Commands:
-  kill        Envia sinal para um processo (default SIGTERM)
-  listening   Lista todas as portas em escuta no sistema
-  open-files  Lista arquivos abertos por um processo
-  ports       Lista portas ouvidas por um processo
-  renice      Altera a prioridade de um processo
-  tree        Exibe a árvore de processos
-  zombies     Elimina processos zumbis
-
-Flags:
-  -h, --help   help for process
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli process [command] --help" for more information about a command.
-```
-
-### remote
-```
-Conectar, executar comandos e transferir arquivos via SSH.
-
-Usage:
-  troncli remote [command]
-
-Available Commands:
-  connect     Conectar a um host remoto (interativo)
-  copy        Copiar arquivo para host remoto (SCP)
-  exec        Executar comando em host remoto
-  list        Listar perfis SSH configurados
-
-Flags:
-  -h, --help   help for remote
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli remote [command] --help" for more information about a command.
-```
-
-### service
-```
-Controlar serviços (systemd, sysvinit, openrc, runit) de forma unificada.
-
-Usage:
-  troncli service [command]
-
-Available Commands:
-  disable     Desabilitar serviço na inicialização
-  enable      Habilitar serviço na inicialização
-  list        Listar serviços
-  logs        Ver logs do serviço
-  restart     Reiniciar um serviço
-  start       Iniciar um serviço
-  status      Ver status detalhado de um serviço
-  stop        Parar um serviço
-
-Flags:
-  -h, --help   help for service
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli service [command] --help" for more information about a command.
-```
-
-### system
-```
-Exibe informações detalhadas sobre o sistema, kernel, uptime e ambiente.
-
-Usage:
-  troncli system [command]
-
-Available Commands:
-  info        Exibe informações gerais do sistema
-  kernel      Exibe versão do kernel
-  profile     Exibe o perfil completo do sistema (JSON)
-
-Flags:
-  -h, --help   help for system
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli system [command] --help" for more information about a command.
-```
-
-### user
-```
-Gerencie usuários e grupos do sistema (add, del, modify, list).
-
-Usage:
-  troncli user [command]
-
-Available Commands:
-  add         Adicionar novo usuário
-  del         Remover usuário
-  list        Listar usuários
-  modify      Modificar usuário existente
-
-Flags:
-  -h, --help   help for user
-
-Global Flags:
-      --dry-run       Simulate execution without making changes
-      --json          Output in JSON format
-      --no-color      Disable color output
-      --quiet         Suppress output
-      --timeout int   Timeout in seconds (default 30)
-      --verbose       Enable verbose logging
-      --yaml          Output in YAML format
-
-Use "troncli user [command] --help" for more information about a command.
-```
-
+# TRONCLI Command Reference (v1.0)
+
+This document lists all available commands in TRONCLI v1.0.
+
+## Global Flags
+All commands support the following global flags:
+- `--json`: Output in JSON format
+- `--yaml`: Output in YAML format
+- `--quiet`: Suppress output
+- `--dry-run`: Simulate execution without making changes
+- `--timeout`: Timeout in seconds (default 30)
+- `--verbose`: Enable verbose logging
+- `--no-color`: Disable color output
+
+## System Management
+### `troncli system`
+Manage system information and profile.
+- `troncli system info`: Display system information (OS, Kernel, etc.)
+
+### `troncli doctor`
+Check system health and prerequisites.
+- `troncli doctor`: Run all health checks
+
+### `troncli service`
+Manage system services (systemd, openrc, etc.).
+- `troncli service list`: List all services
+- `troncli service start <name>`: Start a service
+- `troncli service stop <name>`: Stop a service
+- `troncli service restart <name>`: Restart a service
+- `troncli service status <name>`: Get service status
+- `troncli service enable <name>`: Enable a service at boot
+- `troncli service disable <name>`: Disable a service at boot
+- `troncli service logs <name>`: View service logs
+
+### `troncli process`
+Manage system processes.
+- `troncli process tree`: Show process tree
+- `troncli process kill <pid>`: Kill a process
+- `troncli process renice <pid> <priority>`: Change process priority
+- `troncli process open-files <pid>`: List open files by a process
+- `troncli process ports <pid>`: List ports used by a process
+- `troncli process listening`: List all listening ports
+- `troncli process zombies`: Find and kill zombie processes
+
+## Package Management
+### `troncli pkg`
+Universal package manager wrapper (apt, dnf, yum, pacman, apk, zypper).
+- `troncli pkg install <package>`: Install a package
+- `troncli pkg remove <package>`: Remove a package
+- `troncli pkg update`: Update package lists
+- `troncli pkg upgrade`: Upgrade all packages
+- `troncli pkg search <query>`: Search for packages
+
+## User & Group Management
+### `troncli user`
+Manage system users.
+- `troncli user list`: List all users
+- `troncli user add <username>`: Add a new user
+- `troncli user delete <username>`: Delete a user
+- `troncli user modify <username>`: Modify a user
+
+### `troncli group`
+Manage system groups.
+- `troncli group list`: List all groups
+- `troncli group add <groupname>`: Add a new group
+- `troncli group delete <groupname>`: Delete a group
+
+## Network & Security
+### `troncli network`
+Manage network configuration.
+- `troncli network info`: Show network interfaces
+- `troncli network set-state <interface> <up|down>`: Set interface state
+- `troncli network sockets`: List open sockets
+- `troncli network trace <target>`: Trace route to target
+- `troncli network dig <domain>`: DNS lookup
+- `troncli network scan <target>`: Port scan
+- `troncli network capture <interface>`: Capture packets (tcpdump)
+
+### `troncli firewall`
+Manage firewall rules (nftables/iptables/ufw/firewalld).
+- `troncli firewall list`: List rules
+- `troncli firewall allow <port/proto>`: Allow traffic
+- `troncli firewall deny <port/proto>`: Deny traffic
+- `troncli firewall enable`: Enable firewall
+- `troncli firewall disable`: Disable firewall
+
+### `troncli audit`
+Security auditing tools.
+- `troncli audit logins`: List recent logins
+- `troncli audit sudoers`: List sudoers
+- `troncli audit file-changes <path>`: Monitor file changes
+- `troncli audit commands`: Audit executed commands
+
+## Storage
+### `troncli disk`
+Manage disks and filesystems.
+- `troncli disk list`: List block devices
+- `troncli disk usage <path>`: Show filesystem usage
+- `troncli disk mounts`: List mount points
+- `troncli disk mount <source> <target>`: Mount a device
+- `troncli disk unmount <target>`: Unmount a device
+- `troncli disk format <device> <fstype>`: Format a device
+
+## Automation & Tools
+### `troncli bash`
+Execute bash commands and scripts.
+- `troncli bash run <command>`: Run a single command
+- `troncli bash script <file>`: Run a bash script
+
+### `troncli remote`
+Manage remote SSH connections.
+- `troncli remote list`: List saved connections
+- `troncli remote connect <name>`: Connect to a remote host
+- `troncli remote exec <name> <command>`: Execute command remotely
+- `troncli remote copy <name> <src> <dest>`: Copy files via SCP
+
+### `troncli container`
+Manage containers (Docker/Podman).
+- `troncli container list`: List containers
+- `troncli container start <id>`: Start a container
+- `troncli container stop <id>`: Stop a container
+- `troncli container logs <id>`: View container logs
+
+### `troncli plugin`
+Manage TRONCLI plugins.
+- `troncli plugin list`: List installed plugins
+- `troncli plugin install <url>`: Install a plugin
+- `troncli plugin remove <name>`: Remove a plugin
+
+### `troncli completion`
+Generate shell autocompletion scripts.
+- `troncli completion bash`: Generate bash completion
+- `troncli completion zsh`: Generate zsh completion
+- `troncli completion fish`: Generate fish completion
+- `troncli completion powershell`: Generate powershell completion
