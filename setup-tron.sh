@@ -1,4 +1,7 @@
 #!/bin/bash
+# TRONCLI Installer Script
+# Usage: curl -sS https://raw.githubusercontent.com/rsdenck/troncli/main/setup-tron.sh | bash
+
 set -e
 
 REPO="rsdenck/troncli"
