@@ -28,9 +28,9 @@ jobs:
         run: go mod verify
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@971e284b6050e8f58e33b11c2a050516b3b55866 # v6.1.1
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v6.1.1
+          version: v1.60
           args: --config=.golangci.yml
 
       - name: Static Check

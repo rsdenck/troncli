@@ -123,6 +123,9 @@ func getProcessState(pid int) (string, error) {
 		return "", fmt.Errorf("parse error")
 	}
 	// state is the character after ") "
+	return string(s[closeParen+2]), nil
+}
+
 func (m *LinuxProcessManager) KillZombies() (int, error) {
 	// Strategy:
 	// 1. Find all Zombie processes

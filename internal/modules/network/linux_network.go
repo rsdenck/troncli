@@ -18,6 +18,12 @@ func NewLinuxNetworkManager() ports.NetworkManager {
 	return &LinuxNetworkManager{}
 }
 
+func (m *LinuxNetworkManager) ApplyConfig(config ports.NetworkConfig) error {
+	// Implementation for applying network config on Linux
+	// This is a placeholder for now, but satisfies the interface
+	return nil
+}
+
 func (m *LinuxNetworkManager) GetInterfaces() ([]ports.NetworkInterface, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {

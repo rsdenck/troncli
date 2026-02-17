@@ -64,26 +64,35 @@ func convertDevices(devices []blockDeviceJSON) []ports.BlockDevice {
 	return result
 }
 
-func (m *LinuxDiskManager) GetFilesystemUsage(path string) (ports.FilesystemUsage, error) {
+func (m *LinuxDiskManager) GetUsage(path string) (*ports.DiskUsage, error) {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(path, &stat); err != nil {
-		return ports.FilesystemUsage{}, err
+		return nil, err
 	}
 
-	// Blocks * BlockSize = Total Bytes
-	total := uint64(stat.Blocks) * uint64(stat.Bsize)
-	free := uint64(stat.Bfree) * uint64(stat.Bsize)
-	available := uint64(stat.Bavail) * uint64(stat.Bsize)
+	// Bsize is uint32 on some archs (e.g. arm), uint64 on others. Cast to uint64 to be safe.
+	bsize := uint64(stat.Bsize)
+	total := stat.Blocks * bsize
+	free := stat.Bfree * bsize
 	used := total - free
 
-	return ports.FilesystemUsage{
-		Path:      path,
-		Total:     total,
-		Used:      used,
-		Free:      available, // Available to unprivileged users
-		Files:     uint64(stat.Files),
-		FilesFree: uint64(stat.Ffree),
+	usagePercent := 0.0
+	if total > 0 {
+		usagePercent = float64(used) / float64(total) * 100
+	}
+
+	return &ports.DiskUsage{
+		Path:         path,
+		TotalBytes:   total,
+		UsedBytes:    used,
+		FreeBytes:    free,
+		UsagePercent: usagePercent,
 	}, nil
+}
+
+func (m *LinuxDiskManager) Cleanup() error {
+	// No specific cleanup needed for LinuxDiskManager yet
+	return nil
 }
 
 func (m *LinuxDiskManager) GetMounts() ([]string, error) {
