@@ -1,60 +1,88 @@
-# TRONCLI
+<div align="center">
 
-> **IDENTIDADE DO SISTEMA**
-> 
-> HOST: GITHUB
-> OS: LINUX
-> KERNEL: 6.8.0-RC1
-> UPTIME: 99.99%
+<table>
+<tr>
+<td align="left" width="55%">
 
-## VISÃO GERAL
+### TRONCLI | System Administration TUI
 
-TRONCLI é uma TUI (Interface de Usuário em Texto) de Administração de Sistemas Linux de nível de produção, escrita 100% em Go. Ela fornece monitoramento de sistema em tempo real, gerenciamento de LVM, análise de rede e auditoria de segurança com uma identidade visual inspirada em sistemas de grade de alta tecnologia.
+<br>
 
-**SEM MOCKS. SEM SIMULAÇÃO. CONTROLE REAL DO KERNEL.**
+**Production Grade Linux Tool**
+Real-time Monitoring | LVM Management | Security Auditing
 
-![Licença](https://img.shields.io/badge/LICENSE-MIT-00d9ff?style=for-the-badge&labelColor=000000)
-![Versão Go](https://img.shields.io/badge/GO-1.22+-00d9ff?style=for-the-badge&labelColor=000000&logo=go)
-![Plataforma](https://img.shields.io/badge/PLATFORM-LINUX-00d9ff?style=for-the-badge&labelColor=000000&logo=linux)
-![Build](https://img.shields.io/badge/BUILD-PASSING-00d9ff?style=for-the-badge&labelColor=000000)
+<br>
 
-## MÓDULOS PRINCIPAIS
+_"Building systems that do not wake people up at 3 AM."_
 
-### [01] DASHBOARD DO SISTEMA
-Métricas em tempo real de `/proc` e `/sys`.
-- Uso de CPU (Usuário/Sistema/Ocioso)
-- Memória (Ram/Swap)
-- Carga Média (1/5/15)
-- E/S de Disco e Taxa de Transferência de Rede
+</td>
+<td align="center" width="45%">
+<h3>TRONCLI<br>INTERFACE</h3>
+</td>
+</tr>
+</table>
 
-### [02] GERENCIADOR LVM
-Interface direta para o Logical Volume Manager.
-- Volumes Físicos (PV)
-- Grupos de Volumes (VG)
-- Volumes Lógicos (LV)
-- Operações de Extensão/Redução
+</div>
 
-### [03] MATRIZ DE REDE
-Análise avançada da pilha de rede.
-- Estatísticas de interfaces
-- Taxas de RX/TX em tempo real
-- Configuração de DNS
-- Estados de soquetes
+### Status
 
-### [04] AUDITORIA DE SEGURANÇA
-Endurecimento do sistema e gerenciamento de usuários.
-- Enumeração de Usuários/Grupos
-- Gerenciamento de sessões SSH
-- Matriz de permissões de arquivos
-- Logs de auditoria
+<div align="center">
+  <img src="https://img.shields.io/badge/Go-1.22+-000000?style=for-the-badge&logo=go&logoColor=00d9ff" />
+  <img src="https://img.shields.io/badge/Platform-Linux-000000?style=for-the-badge&logo=linux&logoColor=00d9ff" />
+  <img src="https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logoColor=00d9ff" />
+  <img src="https://img.shields.io/badge/Build-Passing-000000?style=for-the-badge&logoColor=00d9ff" />
+</div>
 
-## INSTALAÇÃO
+<br>
 
-### PRÉ-REQUISITOS
-- Kernel Linux 5.4+
-- Privilégios de Root (para LVM/Auditoria)
+### Core Modules
 
-### COMPILAR DO CÓDIGO FONTE
+<div align="center">
+
+<table>
+<tr>
+<td valign="top" width="50%">
+
+<h3>System Dashboard</h3>
+
+<img src="https://img.shields.io/badge/CPU_Usage-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/Memory_Stats-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/Load_Average-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/Network_IO-000000?style=for-the-badge&logoColor=00d9ff" />
+
+<hr>
+
+<h3>LVM Manager</h3>
+
+<img src="https://img.shields.io/badge/Physical_Volumes-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/Volume_Groups-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/Logical_Volumes-000000?style=for-the-badge&logoColor=00d9ff" />
+
+</td>
+
+<td valign="top" width="50%">
+
+<h3>Network Matrix</h3>
+
+<img src="https://img.shields.io/badge/Interface_Stats-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/RX_TX_Rates-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/Socket_States-000000?style=for-the-badge&logoColor=00d9ff" />
+
+<hr>
+
+<h3>Security Audit</h3>
+
+<img src="https://img.shields.io/badge/User_Enum-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/SSH_Sessions-000000?style=for-the-badge&logoColor=00d9ff" />
+<img src="https://img.shields.io/badge/Audit_Logs-000000?style=for-the-badge&logoColor=00d9ff" />
+
+</td>
+</tr>
+</table>
+
+</div>
+
+### Installation
 
 ```bash
 git clone https://github.com/rsdenck/troncli.git
@@ -63,31 +91,28 @@ go build -ldflags="-s -w" -o troncli cmd/troncli/main.go
 ./troncli
 ```
 
-## ARQUITETURA
+### Architecture
 
-O sistema segue os princípios da Clean Architecture com estrita separação de responsabilidades.
+The system follows Clean Architecture principles with strict separation of concerns.
 
 ```text
 cmd/
-  troncli/       # Ponto de entrada
+  troncli/       # Entry Point
 internal/
-  core/          # Lógica de domínio e Portas
-  modules/       # Implementações (Específicas Linux)
-  ui/            # Camada TUI (tview/tcell)
+  core/          # Domain Logic & Ports
+  modules/       # Implementations (Linux Specific)
+  ui/            # TUI Layer (tview/tcell)
 ```
 
-## CONTRIBUIÇÃO
+### Contribution
 
-1. Faça um Fork do repositório
-2. Crie sua branch de feature (`git checkout -b feature/RecursoIncrivel`)
-3. Commit suas alterações (`git commit -m 'feat: Adiciona RecursoIncrivel'`)
-4. Push para a branch (`git push origin feature/RecursoIncrivel`)
-5. Abra um Pull Request
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'feat: Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## SEGURANÇA
+### Security
 
-Por favor, reporte vulnerabilidades para `security@troncli.local`.
-Veja [SECURITY.md](SECURITY.md) para detalhes.
-
----
-TRONCLI | FIM DE LINHA DO SISTEMA
+Please report vulnerabilities to `security@troncli.local`.
+See [SECURITY.md](SECURITY.md) for details.

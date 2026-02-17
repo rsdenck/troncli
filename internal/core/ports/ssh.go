@@ -13,4 +13,10 @@ type SSHClient interface {
 
 	// CopyFile copies a file to the remote host
 	CopyFile(profile string, src string, dest string) error
+
+	// CreateTunnel establishes an SSH tunnel
+	CreateTunnel(profile string, localPort, remoteHost, remotePort string, reverse bool) error
+
+	// CloseTunnel closes an active tunnel
+	CloseTunnel(profile string, localPort string) error
 }

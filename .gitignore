@@ -1,0 +1,24 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+troncli.txt
+troncli
+
+# IDEs
+.vscode/
+.idea/
+.trae/
+*.swp
+
+# Go
+vendor/
+go.work
+go.work.sum
+
+# OS
+.DS_Store
+Thumbs.db

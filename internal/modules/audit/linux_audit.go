@@ -25,10 +25,12 @@ type JournalEntry struct {
 	Realtime         string `json:"__REALTIME_TIMESTAMP"`
 	Hostname         string `json:"_HOSTNAME"`
 	PID              string `json:"_PID"`
+	SystemdUnit      string `json:"_SYSTEMD_UNIT"`
 }
 
 func (m *LinuxAuditManager) queryJournal(filters []string, limit int) ([]ports.AuditEntry, error) {
-	args := append([]string{"journalctl", "-o", "json", "-n", strconv.Itoa(limit)}, filters...)
+	// Add JSON output format and reverse order (newest first)
+	args := append([]string{"journalctl", "-o", "json", "-r", "-n", strconv.Itoa(limit)}, filters...)
 	cmd := exec.Command(args[0], args[1:]...)
 	out, err := cmd.Output()
 	if err != nil {
@@ -52,12 +54,18 @@ func (m *LinuxAuditManager) queryJournal(filters []string, limit int) ([]ports.A
 
 		auditEntry := ports.AuditEntry{
 			Timestamp: timestamp,
-			Details:   entry.Message,
+			Message:   entry.Message,
+			Service:   entry.SyslogIdentifier,
+			Host:      entry.Hostname,
 			Severity:  "Info",
 		}
 
 		// Basic parsing logic based on message content
-		if strings.Contains(strings.ToLower(entry.Message), "failed") || strings.Contains(strings.ToLower(entry.Message), "invalid") {
+		lowerMsg := strings.ToLower(entry.Message)
+		if strings.Contains(lowerMsg, "failed") || 
+		   strings.Contains(lowerMsg, "invalid") || 
+		   strings.Contains(lowerMsg, "error") || 
+		   strings.Contains(lowerMsg, "denied") {
 			auditEntry.Severity = "High"
 			auditEntry.Result = "Fail"
 		} else {
@@ -65,7 +73,15 @@ func (m *LinuxAuditManager) queryJournal(filters []string, limit int) ([]ports.A
 		}
 
 		// Extract user if possible (simple heuristic)
-		if strings.Contains(entry.Message, "user ") {
+		if strings.Contains(entry.Message, "user=") {
+			// Extract user=name
+			start := strings.Index(entry.Message, "user=") + 5
+			end := strings.Index(entry.Message[start:], " ")
+			if end == -1 {
+				end = len(entry.Message[start:])
+			}
+			auditEntry.User = entry.Message[start : start+end]
+		} else if strings.Contains(entry.Message, "user ") {
 			parts := strings.Fields(entry.Message)
 			for i, p := range parts {
 				if p == "user" && i+1 < len(parts) {
@@ -80,17 +96,27 @@ func (m *LinuxAuditManager) queryJournal(filters []string, limit int) ([]ports.A
 	return entries, nil
 }
 
-func (m *LinuxAuditManager) GetSSHAudit(limit int) ([]ports.AuditEntry, error) {
-	return m.queryJournal([]string{"-u", "ssh", "-u", "sshd"}, limit)
+func (m *LinuxAuditManager) GetAuthLogs(limit int) ([]ports.AuditEntry, error) {
+	// auth.log is usually covered by syslog identifier 'sshd', 'sudo', 'login', 'su'
+	// Using journalctl facility 'auth' and 'authpriv'
+	return m.queryJournal([]string{"SYSLOG_FACILITY=4", "SYSLOG_FACILITY=10"}, limit)
 }
 
-func (m *LinuxAuditManager) GetSudoAudit(limit int) ([]ports.AuditEntry, error) {
-	return m.queryJournal([]string{"-t", "sudo"}, limit)
+func (m *LinuxAuditManager) GetJournalLogs(service string, limit int) ([]ports.AuditEntry, error) {
+	return m.queryJournal([]string{"-u", service}, limit)
+}
+
+func (m *LinuxAuditManager) GetPAMTrace(limit int) ([]ports.AuditEntry, error) {
+	// PAM logs often come from various services, but we can grep for "pam" in message
+	// or look for specific PAM libs.
+	// journalctl -g "pam_" might be slow, so we rely on auth facility and filter in code?
+	// Or use _TRANSPORT=syslog
+	return m.queryJournal([]string{"SYSLOG_FACILITY=4", "SYSLOG_FACILITY=10"}, limit)
 }
 
 func (m *LinuxAuditManager) CheckCriticalFiles() ([]ports.AuditEntry, error) {
 	// Check /etc/passwd, /etc/shadow permissions
-	files := []string{"/etc/passwd", "/etc/shadow", "/etc/sudoers"}
+	files := []string{"/etc/passwd", "/etc/shadow", "/etc/sudoers", "/etc/ssh/sshd_config"}
 	var entries []ports.AuditEntry
 
 	for _, f := range files {
@@ -102,11 +128,21 @@ func (m *LinuxAuditManager) CheckCriticalFiles() ([]ports.AuditEntry, error) {
 
 		perms := strings.TrimSpace(string(out))
 		// Example check: 644 root root
+		// Shadow must be 640 or 600
 		if f == "/etc/shadow" && !strings.HasPrefix(perms, "640") && !strings.HasPrefix(perms, "600") {
 			entries = append(entries, ports.AuditEntry{
 				Timestamp: time.Now(),
 				Severity:  "High",
-				Details:   fmt.Sprintf("File %s has unsafe permissions: %s", f, perms),
+				Message:   fmt.Sprintf("File %s has unsafe permissions: %s", f, perms),
+				Result:    "Fail",
+			})
+		}
+		// Sudoers must be 440
+		if f == "/etc/sudoers" && !strings.HasPrefix(perms, "440") {
+			entries = append(entries, ports.AuditEntry{
+				Timestamp: time.Now(),
+				Severity:  "High",
+				Message:   fmt.Sprintf("File %s has unsafe permissions: %s", f, perms),
 				Result:    "Fail",
 			})
 		}
@@ -116,7 +152,18 @@ func (m *LinuxAuditManager) CheckCriticalFiles() ([]ports.AuditEntry, error) {
 
 func (m *LinuxAuditManager) CheckSUIDBinaries() ([]string, error) {
 	// find / -perm -4000
-	cmd := exec.Command("find", "/bin", "/usr/bin", "-type", "f", "-perm", "-4000")
+	// Limit to /bin /usr/bin /sbin /usr/sbin to avoid full disk scan in interactive mode
+	cmd := exec.Command("find", "/bin", "/usr/bin", "/sbin", "/usr/sbin", "-type", "f", "-perm", "-4000")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(strings.TrimSpace(string(out)), "\n"), nil
+}
+
+func (m *LinuxAuditManager) CheckListeningPorts() ([]string, error) {
+	// ss -tulpn
+	cmd := exec.Command("ss", "-tulpn")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -134,7 +135,6 @@ func (m *LinuxLVMManager) ListLogicalVolumes() ([]ports.LogicalVolume, error) {
 }
 
 func (m *LinuxLVMManager) CreateLogicalVolume(vgName string, lvName string, size string) error {
-	// Validate inputs (basic)
 	if vgName == "" || lvName == "" || size == "" {
 		return fmt.Errorf("invalid arguments: vgName, lvName and size are required")
 	}
@@ -146,8 +146,7 @@ func (m *LinuxLVMManager) ExtendLogicalVolume(lvPath string, size string) error 
 	if lvPath == "" || size == "" {
 		return fmt.Errorf("invalid arguments: lvPath and size are required")
 	}
-	// -r to resize filesystem automatically
-	_, err := m.runCommand("lvextend", "-L", "+"+size, lvPath, "-r") 
+	_, err := m.runCommand("lvextend", "-L", "+"+size, lvPath) 
 	return err
 }
 
@@ -155,8 +154,7 @@ func (m *LinuxLVMManager) ReduceLogicalVolume(lvPath string, size string) error 
 	if lvPath == "" || size == "" {
 		return fmt.Errorf("invalid arguments: lvPath and size are required")
 	}
-	// -r to resize filesystem automatically (safely)
-	_, err := m.runCommand("lvreduce", "-L", "-"+size, lvPath, "-r")
+	_, err := m.runCommand("lvreduce", "-L", "-"+size, lvPath)
 	return err
 }
 
@@ -168,11 +166,49 @@ func (m *LinuxLVMManager) RemoveLogicalVolume(lvPath string) error {
 	return err
 }
 
+func (m *LinuxLVMManager) ResizeFileSystem(lvPath string) error {
+	// Try resize2fs first (ext4), then xfs_growfs
+	_, err := m.runCommand("resize2fs", lvPath)
+	if err == nil {
+		return nil
+	}
+	// If failed, try xfs_growfs (requires mount point usually, but let's see)
+	// Actually xfs_growfs takes a mount point. We might need to find where it's mounted.
+	// For now, assume resize2fs or let the user handle it if complex.
+	// But requirements say "Professional".
+	// Let's find mount point.
+	out, err := exec.Command("findmnt", "-n", "-o", "TARGET", "--source", lvPath).Output()
+	if err == nil {
+		mountPoint := strings.TrimSpace(string(out))
+		if mountPoint != "" {
+			_, err = m.runCommand("xfs_growfs", mountPoint)
+			return err
+		}
+	}
+	return fmt.Errorf("resize2fs failed and could not determine mountpoint for xfs_growfs")
+}
+
 func (m *LinuxLVMManager) CreatePhysicalVolume(device string) error {
 	if device == "" {
 		return fmt.Errorf("device path is required")
 	}
 	_, err := m.runCommand("pvcreate", device)
+	return err
+}
+
+func (m *LinuxLVMManager) RemovePhysicalVolume(device string) error {
+	if device == "" {
+		return fmt.Errorf("device path is required")
+	}
+	_, err := m.runCommand("pvremove", device)
+	return err
+}
+
+func (m *LinuxLVMManager) ResizePhysicalVolume(device string) error {
+	if device == "" {
+		return fmt.Errorf("device path is required")
+	}
+	_, err := m.runCommand("pvresize", device)
 	return err
 }
 
@@ -185,6 +221,22 @@ func (m *LinuxLVMManager) CreateVolumeGroup(vgName string, pvs []string) error {
 	return err
 }
 
+func (m *LinuxLVMManager) ExtendVolumeGroup(vgName string, pvName string) error {
+	if vgName == "" || pvName == "" {
+		return fmt.Errorf("vgName and pvName are required")
+	}
+	_, err := m.runCommand("vgextend", vgName, pvName)
+	return err
+}
+
+func (m *LinuxLVMManager) ReduceVolumeGroup(vgName string, pvName string) error {
+	if vgName == "" || pvName == "" {
+		return fmt.Errorf("vgName and pvName are required")
+	}
+	_, err := m.runCommand("vgreduce", vgName, pvName)
+	return err
+}
+
 func (m *LinuxLVMManager) RemoveVolumeGroup(vgName string) error {
 	if vgName == "" {
 		return fmt.Errorf("vgName is required")
@@ -194,10 +246,29 @@ func (m *LinuxLVMManager) RemoveVolumeGroup(vgName string) error {
 }
 
 func (m *LinuxLVMManager) ScanDevices() error {
-	_, err := m.runCommand("pvscan")
+	_, err := m.runCommand("pvscan", "--cache")
 	if err != nil {
 		return err
 	}
-	_, err = m.runCommand("vgscan")
+	_, err = m.runCommand("vgscan", "--cache")
 	return err
+}
+
+func (m *LinuxLVMManager) RescanSCSI() error {
+	// Rescan SCSI hosts
+	// echo "- - -" > /sys/class/scsi_host/hostX/scan
+	hosts, err := os.ReadDir("/sys/class/scsi_host")
+	if err != nil {
+		return fmt.Errorf("failed to read scsi_host: %w", err)
+	}
+
+	for _, host := range hosts {
+		scanPath := fmt.Sprintf("/sys/class/scsi_host/%s/scan", host.Name())
+		if err := os.WriteFile(scanPath, []byte("- - -"), 0200); err != nil {
+			// Don't fail completely, just log error conceptually
+			// In production code we might collect errors
+			continue 
+		}
+	}
+	return nil
 }

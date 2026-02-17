@@ -2,20 +2,40 @@ package ports
 
 import "time"
 
-// AuditEntry represents an audit log entry
-type AuditEntry struct {
-	Timestamp time.Time
+// AuditEvent represents a security event
+type AuditEvent struct {
+	Type      string // SSH_FAILURE, SUDO_ATTEMPT, LOGIN_SUCCESS
 	User      string
-	Command   string
-	Result    string // Success/Fail
-	Severity  string // High, Medium, Low
-	Details   string
+	IP        string
+	Timestamp time.Time
+	Message   string
+	Severity  string // INFO, WARNING, CRITICAL
 }
 
-// AuditManager defines operations for system auditing
+// UserAudit represents user security audit
+type UserAudit struct {
+	Username       string
+	UID            string
+	GID            string
+	Home           string
+	Shell          string
+	PasswordStatus string // Empty, Expired, Valid
+	LastChange     string
+	SSHPermissions string // Safe, Unsafe
+	SSHKeysInvalid bool
+}
+
+// AuditManager defines interface for security auditing
 type AuditManager interface {
-	GetSSHAudit(limit int) ([]AuditEntry, error)
-	GetSudoAudit(limit int) ([]AuditEntry, error)
-	CheckCriticalFiles() ([]AuditEntry, error)
-	CheckSUIDBinaries() ([]string, error)
+	// Log Analysis
+	AnalyzeSSH(since time.Duration) ([]AuditEvent, error)
+	AnalyzeSudo(since time.Duration) ([]AuditEvent, error)
+	AnalyzeLogins(since time.Duration) ([]AuditEvent, error)
+
+	// User & Permissions
+	AuditUsers() ([]UserAudit, error)
+	CheckPrivilegedGroups() ([]string, error)
+
+	// Environment
+	CheckBashCompatibility() ([]string, error) // .bashrc checks etc.
 }

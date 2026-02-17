@@ -13,18 +13,32 @@ Nossa visão é construir uma TUI unificada e de nível empresarial que centrali
 - [x] **Framework TUI**: Integração tview/tcell com tema TRON.
 
 ## Fase 2: Integração Profunda com Kernel
-- [ ] **Gerenciador LVM**: Criar/Redimensionar PVs, VGs, LVs.
-- [ ] **Sistema de Auditoria**: Parsear `/var/log/auth.log` e systemd journal.
-- [ ] **Análise de Rede**: Estatísticas de soquetes (ss), integração nftables.
-- [ ] **Matador de Processos**: Kill/renice interativo.
+- [x] **Gerenciador LVM**: Criar/Redimensionar PVs, VGs, LVs.
+- [x] **Sistema de Auditoria**: Parsear `/var/log/auth.log` e systemd journal.
+- [x] **Análise de Rede**: Estatísticas de soquetes (ss), integração nftables.
+- [x] **Matador de Processos**: Kill/renice interativo e limpeza automática de Zumbis.
 
 ## Fase 3: Recursos Empresariais
-- [ ] **Gerenciamento Remoto**: Túneis SSH, integração rsd-sshm.
-- [ ] **Gerenciamento de Containers**: TUI para Podman/Docker.
-- [ ] **Unidades Systemd**: Iniciar/Parar/Habilitar/Editar serviços.
-- [ ] **Cron/Timers**: Gerenciamento de agendamentos.
+- [x] **Gerenciamento Remoto**: Túneis SSH, integração rsd-sshm.
+- [x] **Gerenciamento de Containers**: TUI para Podman/Docker.
+- [x] **Unidades Systemd**: Iniciar/Parar/Habilitar/Editar serviços.
+- [x] **Cron/Timers**: Gerenciamento de agendamentos.
 
-## Fase 4: Polimento Final
+## Fase 4: Abstração Universal (Multi-Distro)
+- [x] **Gerenciador de Pacotes Universal**: Camada unificada para `apt`, `dnf`, `yum`, `pacman`, `zypper`, `apk` (install, remove, update, search).
+- [x] **Firewall Unificado**: Abstração para `nftables`, `iptables`, `firewalld`, `ufw` (allow, block, list).
+- [x] **Rede Universal**: Configuração de IP, DHCP, DNS, Gateway, Rotas (suporte a `netplan`, `ifcfg`, `interfaces`, `NM`, `systemd-networkd`).
+- [x] **Usuários e Permissões Avançadas**: Auditoria de UIDs, senhas expiradas, grupos privilegiados, chaves SSH inválidas.
+- [x] **Modo Auditor Universal**: Detecção automática de logs (`auth.log`, `secure`, `journald`) e análise de falhas/login.
+- [x] **Processos Avançados (Cross-Distro)**: Árvore de processos, zombies, openfiles, ports (via `ps`, `ss`, `lsof`, `/proc`).
+- [x] **Disco Universal (Growth Analysis)**: Detecção de crescimento de diretórios, top arquivos, órfãos, inodes críticos (sem snapshot).
+- [x] **Modo "Compatibilidade Bash"**: Auditoria de `.bashrc`, aliases perigosos, PATH, permissões.
+- [x] **Gestão de Serviços Multi-Init**: Abstração para `systemd`, `service`, `rc-service`, `runit` (start, enable, status).
+- [x] **Modo Doctor Multi-Distro**: Checks universais de saúde (Load, Swap, TCP, Disco, Kernel, Permissões).
+- [x] **Compatibilidade de Ambientes**: Adaptação para WSL, Docker, Kubernetes Node, VM, Bare Metal.
+- [ ] **Sistema de Plugins**: Instalação de plugins específicos por distro (`troncli plugin install arch`).
+
+## Fase 5: Polimento e Distribuição
 - [ ] **Documentação**: Man pages, Wiki.
 - [ ] **Empacotamento**: DEB, RPM, AUR, Snap.
 - [ ] **Temas**: Esquemas de cores personalizados (Cyberpunk, Matrix).

@@ -4,9 +4,14 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/mascli/troncli/internal/collectors/system"
 	"github.com/mascli/troncli/internal/modules/audit"
+	"github.com/mascli/troncli/internal/modules/container"
 	"github.com/mascli/troncli/internal/modules/disk"
 	"github.com/mascli/troncli/internal/modules/lvm"
 	"github.com/mascli/troncli/internal/modules/network"
+	"github.com/mascli/troncli/internal/modules/process"
+	"github.com/mascli/troncli/internal/modules/scheduler"
+	"github.com/mascli/troncli/internal/modules/security"
+	"github.com/mascli/troncli/internal/modules/service"
 	"github.com/mascli/troncli/internal/modules/ssh"
 	"github.com/mascli/troncli/internal/modules/users"
 	"github.com/mascli/troncli/internal/ui/components"
@@ -26,26 +31,30 @@ type App struct {
 }
 
 // NewApp creates and initializes the application
-func NewApp() *App {
+func NewApp() (*App, error) {
 	themes.ApplyTheme()
 
 	tviewApp := tview.NewApplication()
 
 	// Initialize Services/Infra
-	sshClient := ssh.NewRSDSSHMClient()
+	sshClient, err := ssh.NewRSDSSHMClient()
+	if err != nil {
+		return nil, err
+	}
 	lvmManager := lvm.NewLinuxLVMManager(true) // Sudo enabled by default
 	auditManager := audit.NewLinuxAuditManager()
 	systemMonitor := system.NewSystemMonitor()
 	diskManager := disk.NewLinuxDiskManager()
 	networkManager := network.NewLinuxNetworkManager()
 	userManager := users.NewLinuxUserManager()
+	processManager := process.NewLinuxProcessManager()
 
 	header := components.NewHeader(tviewApp)
 	statusBar := components.NewStatusBar()
 	content := tview.NewPages()
 
 	// Views
-	dashboardView := views.NewDashboardView(tviewApp, systemMonitor)
+	dashboardView := views.NewDashboardView(tviewApp, systemMonitor, processManager)
 
 	sshView := views.NewSSHView(tviewApp, sshClient)
 	lvmView := views.NewLVMView(lvmManager)

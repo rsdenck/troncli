@@ -24,4 +24,16 @@ type DiskManager interface {
 	ListBlockDevices() ([]BlockDevice, error)
 	GetFilesystemUsage(path string) (FilesystemUsage, error)
 	GetMounts() ([]string, error)
+
+	// Phase 4: Universal Disk Features
+	GetTopFiles(path string, count int) ([]FileNode, error)
+	GetInodeUsage(path string) (int, int, error) // used, total
+}
+
+// FileNode represents a file or directory
+type FileNode struct {
+	Name  string
+	Path  string
+	Size  uint64
+	IsDir bool
 }

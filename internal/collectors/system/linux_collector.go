@@ -274,6 +274,18 @@ func readTopProcesses() []ports.ProcessInfo {
 		return nil
 	}
 
+	// Read uptime for CPU calculation
+	uptimeData, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return nil
+	}
+	uptimeFields := strings.Fields(string(uptimeData))
+	if len(uptimeFields) < 1 {
+		return nil
+	}
+	uptimeSeconds, _ := strconv.ParseFloat(uptimeFields[0], 64)
+	clkTck := 100.0 // Default for Linux x86/ARM usually
+
 	var procs []ports.ProcessInfo
 
 	for _, path := range matches {
@@ -299,19 +311,27 @@ func readTopProcesses() []ports.ProcessInfo {
 		name := strings.Trim(fields[1], "()")
 		utime, _ := strconv.ParseFloat(fields[13], 64)
 		stime, _ := strconv.ParseFloat(fields[14], 64)
+		starttime, _ := strconv.ParseFloat(fields[21], 64)
 		rss, _ := strconv.ParseUint(fields[23], 10, 64)
 
-		// CPU calculation needs system uptime or total ticks.
-		// For simplicity, we just return the raw ticks here, and the view can display it or
-		// we can calculate percentage if we have total time.
-		// Let's just use raw values relative to each other for "Top" sorting.
-		// Real percentage requires state (prev_utime, prev_stime) per PID.
-		// Given constraints, we will just sum utime+stime for sorting.
+		// Calculate average CPU usage since process start
+		// total_time / elapsed_time
+		totalTime := utime + stime
+		elapsedTicks := (uptimeSeconds * clkTck) - starttime
+		if elapsedTicks <= 0 {
+			elapsedTicks = 1
+		}
+		
+		// Usage as percentage of one core (can exceed 100%? No, because totalTime is ticks)
+		// Wait, if multi-core, totalTime can increase faster than wall clock?
+		// No, ticks are ticks.
+		// Percentage = (ticks / elapsed_ticks) * 100
+		cpuUsage := (totalTime / elapsedTicks) * 100.0
 
 		procs = append(procs, ports.ProcessInfo{
 			PID:    pid,
 			Name:   name,
-			CPU:    utime + stime,
+			CPU:    cpuUsage,
 			Memory: rss * 4096, // Page size usually 4KB
 			User:   "",         // Will be filled for top processes
 		})
