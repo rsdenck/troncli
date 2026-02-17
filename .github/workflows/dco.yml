@@ -1,0 +1,46 @@
+name: DCO
+
+on:
+  pull_request:
+    branches: [ "main", "develop", "release/*" ]
+
+permissions:
+  contents: read
+
+jobs:
+  dco:
+    name: DCO Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4e7d973ad74ed # v5.1.0
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      - name: Check DCO
+        # Using a simple script to check for "Signed-off-by" in commits
+        # This avoids external actions for simple text checks
+        run: |
+          echo "Checking DCO for PR..."
+          # Get the range of commits in this PR
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          
+          echo "Checking range: $base_sha..$head_sha"
+          
+          # List commits that are missing Signed-off-by
+          missing_dco=$(git log --no-merges --pretty="%H %ae %s" "$base_sha..$head_sha" | grep -v "Signed-off-by:") || true
+          
+          if [ -n "$missing_dco" ]; then
+            echo "Error: The following commits are missing a DCO Sign-off (Signed-off-by: Name <email>):"
+            echo "$missing_dco"
+            exit 1
+          fi
+          
+          echo "All commits in PR have Signed-off-by."
