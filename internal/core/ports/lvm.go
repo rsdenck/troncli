@@ -37,5 +37,9 @@ type LVMManager interface {
 	ReduceLogicalVolume(lvPath string, size string) error
 	RemoveLogicalVolume(lvPath string) error
 	
+	CreatePhysicalVolume(device string) error
+	CreateVolumeGroup(vgName string, pvs []string) error
+	RemoveVolumeGroup(vgName string) error
+	
 	ScanDevices() error
 }
