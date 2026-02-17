@@ -2,10 +2,10 @@ package ssh
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/mascli/troncli/internal/core/ports"
 )
@@ -15,42 +15,48 @@ type RSDSSHMClient struct {
 	binaryPath string
 }
 
+type sshProfile struct {
+	Name string `json:"name"`
+	Host string `json:"host"`
+	User string `json:"user"`
+	Tags []string `json:"tags"`
+}
+
 // NewRSDSSHMClient creates a new client
-func NewRSDSSHMClient() ports.SSHClient {
-	// Default to "rsd-sshm" in PATH
+func NewRSDSSHMClient() (ports.SSHClient, error) {
 	path, err := exec.LookPath("rsd-sshm")
 	if err != nil {
-		// Fallback or just use the name and hope it's in PATH when run
-		path = "rsd-sshm"
+		return nil, fmt.Errorf("rsd-sshm binary not found in PATH: %w", err)
 	}
 	return &RSDSSHMClient{
 		binaryPath: path,
-	}
+	}, nil
 }
 
 // ListProfiles returns a list of available SSH profiles
 func (c *RSDSSHMClient) ListProfiles() ([]string, error) {
-	cmd := exec.Command(c.binaryPath, "--list", "--json") // Assuming JSON output support
+	// Execute real command to get profiles in JSON format
+	cmd := exec.Command(c.binaryPath, "--list", "--json")
 	var out bytes.Buffer
+	var stderr bytes.Buffer
 	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		// Fallback for demo if binary missing
-		if strings.Contains(err.Error(), "executable file not found") {
-			return []string{"demo-server-01", "demo-db-01", "prod-web-01"}, nil
-		}
-		return nil, fmt.Errorf("failed to list profiles: %w", err)
+	cmd.Stderr = &stderr
+	
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to list profiles: %w, stderr: %s", err, stderr.String())
 	}
 	
-	// Parse output (mock implementation for now as we don't know the format)
-	lines := strings.Split(out.String(), "\n")
-	var profiles []string
-	for _, line := range lines {
-		if strings.TrimSpace(line) != "" {
-			profiles = append(profiles, strings.TrimSpace(line))
-		}
+	var profiles []sshProfile
+	if err := json.Unmarshal(out.Bytes(), &profiles); err != nil {
+		return nil, fmt.Errorf("failed to parse rsd-sshm output: %w", err)
 	}
-	return profiles, nil
+	
+	result := make([]string, len(profiles))
+	for i, p := range profiles {
+		result[i] = p.Name
+	}
+	
+	return result, nil
 }
 
 // Connect establishes a connection to a profile (interactive)
@@ -65,7 +71,6 @@ func (c *RSDSSHMClient) Connect(profile string) error {
 
 // Execute runs a command on the remote host and returns the output
 func (c *RSDSSHMClient) Execute(profile string, command string) (string, error) {
-	// Assuming rsd-sshm has an 'exec' or similar command
 	cmd := exec.Command(c.binaryPath, "exec", profile, "--", command)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -82,7 +87,12 @@ func (c *RSDSSHMClient) Execute(profile string, command string) (string, error) 
 
 // CopyFile copies a file to the remote host
 func (c *RSDSSHMClient) CopyFile(profile string, src string, dest string) error {
-	// Assuming rsd-sshm supports scp-like functionality
 	cmd := exec.Command(c.binaryPath, "scp", src, fmt.Sprintf("%s:%s", profile, dest))
-	return cmd.Run()
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("scp failed: %w, stderr: %s", err, stderr.String())
+	}
+	return nil
 }

@@ -7,7 +7,10 @@ import (
 )
 
 func main() {
-	app := ui.NewApp()
+	app, err := ui.NewApp()
+	if err != nil {
+		log.Fatalf("Failed to initialize application: %v", err)
+	}
 	if err := app.Run(); err != nil {
 		log.Fatalf("Error running application: %v", err)
 	}

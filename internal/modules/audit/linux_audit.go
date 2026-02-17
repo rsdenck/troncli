@@ -32,11 +32,7 @@ func (m *LinuxAuditManager) queryJournal(filters []string, limit int) ([]ports.A
 	cmd := exec.Command(args[0], args[1:]...)
 	out, err := cmd.Output()
 	if err != nil {
-		// Mock data if journalctl fails (e.g. on Windows dev)
-		if strings.Contains(err.Error(), "executable file not found") {
-			return mockAuditData(), nil
-		}
-		return nil, err
+		return nil, fmt.Errorf("journalctl failed: %w", err)
 	}
 
 	var entries []ports.AuditEntry
@@ -103,7 +99,7 @@ func (m *LinuxAuditManager) CheckCriticalFiles() ([]ports.AuditEntry, error) {
 		if err != nil {
 			continue
 		}
-		
+
 		perms := strings.TrimSpace(string(out))
 		// Example check: 644 root root
 		if f == "/etc/shadow" && !strings.HasPrefix(perms, "640") && !strings.HasPrefix(perms, "600") {
@@ -126,11 +122,4 @@ func (m *LinuxAuditManager) CheckSUIDBinaries() ([]string, error) {
 		return nil, err
 	}
 	return strings.Split(strings.TrimSpace(string(out)), "\n"), nil
-}
-
-func mockAuditData() []ports.AuditEntry {
-	return []ports.AuditEntry{
-		{Timestamp: time.Now(), User: "root", Command: "ssh", Result: "Success", Severity: "Info", Details: "Accepted publickey for root"},
-		{Timestamp: time.Now().Add(-1 * time.Minute), User: "unknown", Command: "ssh", Result: "Fail", Severity: "High", Details: "Failed password for invalid user admin"},
-	}
 }

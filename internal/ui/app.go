@@ -104,7 +104,7 @@ func NewApp() *App {
 
 	tviewApp.SetRoot(splash, true)
 
-	return app
+	return app, nil
 }
 
 // Run starts the application
