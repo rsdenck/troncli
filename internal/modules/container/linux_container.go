@@ -1,7 +1,6 @@
 package container
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -39,37 +38,18 @@ func (m *LinuxContainerManager) ListContainers(all bool) ([]ports.Container, err
 	var result []ports.Container
 
 	for _, runtime := range m.runtimes {
-		args := []string{"ps", "--format", "json"}
+		// Run `runtime ps -a`
+		args := []string{"ps", "--format", "{{.ID}}|{{.Names}}|{{.Image}}|{{.State}}|{{.Status}}"}
 		if all {
 			args = append(args, "-a")
 		}
-
 		cmd := exec.Command(runtime, args...)
-		output, err := cmd.Output()
+		out, err := cmd.Output()
 		if err != nil {
-			// Log error but continue to other runtimes?
-			continue
+			continue // Skip failed runtimes
 		}
 
-		// Docker and Podman JSON output might differ slightly in structure (array vs stream)
-		// Usually 'ps --format json' returns a JSON array in Podman, but Docker might return NDJSON lines depending on version/config.
-		// Let's handle both or use a template to be safe.
-		// Using a template is safer for consistency across versions: {{json .}}
-		
-		// Actually, let's try standard json first. Podman returns array. Docker with --format json (recent versions) returns NDJSON lines.
-		// Safer approach: use --format '{{.ID}}|{{.Names}}|{{.Image}}|{{.State}}|{{.Status}}' and split.
-		
-		cmd = exec.Command(runtime, "ps", "--no-trunc", "--format", "{{.ID}}|{{.Names}}|{{.Image}}|{{.State}}|{{.Status}}")
-		if all {
-			cmd.Args = append(cmd.Args, "-a")
-		}
-		
-		outBytes, err := cmd.Output()
-		if err != nil {
-			continue
-		}
-		
-		lines := strings.Split(string(outBytes), "\n")
+		lines := strings.Split(string(out), "\n")
 		for _, line := range lines {
 			if strings.TrimSpace(line) == "" {
 				continue
@@ -78,7 +58,7 @@ func (m *LinuxContainerManager) ListContainers(all bool) ([]ports.Container, err
 			if len(parts) < 5 {
 				continue
 			}
-			
+
 			result = append(result, ports.Container{
 				ID:      parts[0],
 				Names:   strings.Split(parts[1], ","),

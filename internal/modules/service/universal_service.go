@@ -91,7 +91,7 @@ func (m *UniversalServiceManager) listSysvServices(ctx context.Context) ([]ports
 		if len(parts) >= 4 {
 			status := parts[1]
 			name := parts[3]
-			
+
 			state := "inactive"
 			if status == "+" {
 				state = "active"
@@ -108,7 +108,7 @@ func (m *UniversalServiceManager) listSysvServices(ctx context.Context) ([]ports
 
 func (m *UniversalServiceManager) listOpenRCServices(ctx context.Context) ([]ports.ServiceUnit, error) {
 	// rc-status --all
-	res, err := m.executor.Exec(ctx, "rc-status", "--all")
+	_, err := m.executor.Exec(ctx, "rc-status", "--all")
 	if err != nil {
 		return nil, err
 	}

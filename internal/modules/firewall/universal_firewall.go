@@ -133,7 +133,12 @@ func (m *UniversalFirewallManager) ListRules() ([]ports.FirewallRule, error) {
 	case "iptables":
 		return m.parseIptablesRules(res.Stdout), nil
 	default:
-		return m.parseRawRules(res.Stdout), nil
+		// For others, return raw output as comment in a single rule for now
+		// or implement specific parsers
+		return []ports.FirewallRule{{
+			ID:      "RAW",
+			Comment: res.Stdout,
+		}}, nil
 	}
 }
 
@@ -141,44 +146,39 @@ func (m *UniversalFirewallManager) parseUfwRules(output string) []ports.Firewall
 	var rules []ports.FirewallRule
 	lines := strings.Split(output, "\n")
 
-	// Skip header lines
-	startParsing := false
+	// Skip header lines until we find "--" separator or just look for patterns
+	// UFW status numbered:
+	// Status: active
+	//
+	//      To                         Action      From
+	//      --                         ------      ----
+	// [ 1] 22/tcp                     ALLOW IN    Anywhere
+	
 	for _, line := range lines {
-		if strings.Contains(line, "--") && strings.Contains(line, "------") {
-			startParsing = true
-			continue
-		}
-		if !startParsing {
-			continue
-		}
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "[") && strings.Contains(line, "]") {
+			// [ 1] 22/tcp                     ALLOW IN    Anywhere
+			parts := strings.Fields(line)
+			if len(parts) >= 4 {
+				id := strings.Trim(parts[0], "[]")
+				portProto := parts[1]
+				action := parts[2]
+				
+				pp := strings.Split(portProto, "/")
+				port := pp[0]
+				proto := "tcp"
+				if len(pp) > 1 {
+					proto = pp[1]
+				}
 
-		// [ 1] 22/tcp                     ALLOW IN    Anywhere
-		parts := strings.Fields(line)
-		if len(parts) >= 4 {
-			// Extract ID from [ 1]
-			id := strings.Trim(parts[0], "[]")
-			portProto := parts[1]
-			action := parts[2]
-			source := parts[3]
-			if len(parts) > 4 {
-				source += " " + parts[4] // Handle "Anywhere (v6)"
+				rules = append(rules, ports.FirewallRule{
+					ID:       id,
+					Action:   action,
+					Protocol: proto,
+					Port:     port,
+					Comment:  line,
+				})
 			}
-
-			// Split port/proto
-			pp := strings.Split(portProto, "/")
-			port := pp[0]
-			proto := "tcp" // Default
-			if len(pp) > 1 {
-				proto = pp[1]
-			}
-
-			rules = append(rules, ports.FirewallRule{
-				ID:       id,
-				Action:   action,
-				Protocol: proto,
-				Port:     port,
-				Source:   source,
-			})
 		}
 	}
 	return rules
@@ -197,14 +197,13 @@ func (m *UniversalFirewallManager) parseIptablesRules(output string) []ports.Fir
 		if len(fields) < 5 || fields[0] == "num" || strings.HasPrefix(fields[0], "Chain") {
 			continue
 		}
-
-		// Basic mapping
+		
+		// 1 ACCEPT tcp -- 0.0.0.0/0 0.0.0.0/0 tcp dpt:22
 		id := fields[0]
-		target := fields[1]
+		action := fields[1]
 		proto := fields[2]
-		source := fields[4]
-
-		// Extract port from options if present (e.g., dpt:22)
+		
+		// Extract port if possible (e.g., dpt:22)
 		port := "any"
 		for _, f := range fields {
 			if strings.HasPrefix(f, "dpt:") {
@@ -214,27 +213,10 @@ func (m *UniversalFirewallManager) parseIptablesRules(output string) []ports.Fir
 
 		rules = append(rules, ports.FirewallRule{
 			ID:       id,
-			Action:   target,
+			Action:   action,
 			Protocol: proto,
 			Port:     port,
-			Source:   source,
-		})
-	}
-	return rules
-}
-
-func (m *UniversalFirewallManager) parseRawRules(output string) []ports.FirewallRule {
-	var rules []ports.FirewallRule
-	lines := strings.Split(output, "\n")
-
-	for i, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		rules = append(rules, ports.FirewallRule{
-			ID:      fmt.Sprintf("%d", i+1),
-			Action:  "INFO",
-			Comment: line,
+			Comment:  line,
 		})
 	}
 	return rules
@@ -243,27 +225,44 @@ func (m *UniversalFirewallManager) parseRawRules(output string) []ports.Firewall
 // Enable enables the firewall
 func (m *UniversalFirewallManager) Enable() error {
 	ctx := context.Background()
-	switch m.profile.Firewall {
+	cmd := m.profile.Firewall
+	
+	switch cmd {
 	case "ufw":
 		_, err := m.executor.Exec(ctx, "ufw", "enable")
 		return err
 	case "firewalld":
-		_, err := m.executor.Exec(ctx, "systemctl", "start", "firewalld")
+		_, err := m.executor.Exec(ctx, "systemctl", "enable", "--now", "firewalld")
+		return err
+	case "iptables":
+		// No direct enable, assume service
+		_, err := m.executor.Exec(ctx, "systemctl", "enable", "--now", "iptables")
+		return err
+	case "nftables":
+		_, err := m.executor.Exec(ctx, "systemctl", "enable", "--now", "nftables")
 		return err
 	}
-	return nil
+	return fmt.Errorf("unsupported firewall manager: %s", cmd)
 }
 
 // Disable disables the firewall
 func (m *UniversalFirewallManager) Disable() error {
 	ctx := context.Background()
-	switch m.profile.Firewall {
+	cmd := m.profile.Firewall
+	
+	switch cmd {
 	case "ufw":
 		_, err := m.executor.Exec(ctx, "ufw", "disable")
 		return err
 	case "firewalld":
-		_, err := m.executor.Exec(ctx, "systemctl", "stop", "firewalld")
+		_, err := m.executor.Exec(ctx, "systemctl", "disable", "--now", "firewalld")
+		return err
+	case "iptables":
+		_, err := m.executor.Exec(ctx, "systemctl", "disable", "--now", "iptables")
+		return err
+	case "nftables":
+		_, err := m.executor.Exec(ctx, "systemctl", "disable", "--now", "nftables")
 		return err
 	}
-	return nil
+	return fmt.Errorf("unsupported firewall manager: %s", cmd)
 }

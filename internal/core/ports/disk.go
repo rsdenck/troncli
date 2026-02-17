@@ -28,6 +28,13 @@ type DiskManager interface {
 	// Phase 4: Universal Disk Features
 	GetTopFiles(path string, count int) ([]FileNode, error)
 	GetInodeUsage(path string) (int, int, error) // used, total
+	Cleanup() error
+	GetDiskHealth() (string, error)
+
+	// New v1.0 commands
+	Mount(source, target, fstype, options string) error
+	Unmount(target string) error
+	Format(device, fstype string) error
 }
 
 // FileNode represents a file or directory

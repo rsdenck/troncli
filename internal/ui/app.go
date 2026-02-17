@@ -3,15 +3,13 @@ package ui
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/mascli/troncli/internal/collectors/system"
+	"github.com/mascli/troncli/internal/core/adapter"
+	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/audit"
-	"github.com/mascli/troncli/internal/modules/container"
 	"github.com/mascli/troncli/internal/modules/disk"
 	"github.com/mascli/troncli/internal/modules/lvm"
 	"github.com/mascli/troncli/internal/modules/network"
 	"github.com/mascli/troncli/internal/modules/process"
-	"github.com/mascli/troncli/internal/modules/scheduler"
-	"github.com/mascli/troncli/internal/modules/security"
-	"github.com/mascli/troncli/internal/modules/service"
 	"github.com/mascli/troncli/internal/modules/ssh"
 	"github.com/mascli/troncli/internal/modules/users"
 	"github.com/mascli/troncli/internal/ui/components"
@@ -37,17 +35,24 @@ func NewApp() (*App, error) {
 	tviewApp := tview.NewApplication()
 
 	// Initialize Services/Infra
+	executor := adapter.NewExecutor()
+	profileEngine := services.NewProfileEngine(executor)
+	profile, err := profileEngine.DetectProfile()
+	if err != nil {
+		return nil, err
+	}
+
 	sshClient, err := ssh.NewRSDSSHMClient()
 	if err != nil {
 		return nil, err
 	}
 	lvmManager := lvm.NewLinuxLVMManager(true) // Sudo enabled by default
-	auditManager := audit.NewLinuxAuditManager()
+	auditManager := audit.NewUniversalAuditManager(executor, profile)
 	systemMonitor := system.NewSystemMonitor()
-	diskManager := disk.NewLinuxDiskManager()
-	networkManager := network.NewLinuxNetworkManager()
-	userManager := users.NewLinuxUserManager()
-	processManager := process.NewLinuxProcessManager()
+	diskManager := disk.NewUniversalDiskManager(executor, profile)
+	networkManager := network.NewUniversalNetworkManager(executor, profile)
+	userManager := users.NewUniversalUserManager(executor, profile)
+	processManager := process.NewUniversalProcessManager(executor, profile)
 
 	header := components.NewHeader(tviewApp)
 	statusBar := components.NewStatusBar()

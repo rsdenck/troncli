@@ -20,8 +20,11 @@ type PackageManager interface {
 	// Remove removes a package
 	Remove(packageName string) error
 
-	// Update updates the package list and upgrades the system
+	// Update updates the package list
 	Update() error
+
+	// Upgrade upgrades the system packages
+	Upgrade() error
 
 	// Search searches for a package
 	Search(query string) ([]PackageInfo, error)

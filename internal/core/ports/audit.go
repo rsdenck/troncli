@@ -23,6 +23,7 @@ type UserAudit struct {
 	LastChange     string
 	SSHPermissions string // Safe, Unsafe
 	SSHKeysInvalid bool
+	Message        string // Security findings
 }
 
 // AuditManager defines interface for security auditing
@@ -31,6 +32,7 @@ type AuditManager interface {
 	AnalyzeSSH(since time.Duration) ([]AuditEvent, error)
 	AnalyzeSudo(since time.Duration) ([]AuditEvent, error)
 	AnalyzeLogins(since time.Duration) ([]AuditEvent, error)
+	AnalyzeFileChanges(paths []string, since time.Duration) ([]AuditEvent, error)
 
 	// User & Permissions
 	AuditUsers() ([]UserAudit, error)

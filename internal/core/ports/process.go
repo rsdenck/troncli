@@ -18,6 +18,7 @@ type ProcessManager interface {
 	GetProcessTree() ([]ProcessNode, error)
 	GetOpenFiles(pid int) ([]string, error)
 	GetProcessPorts(pid int) ([]string, error)
+	GetAllListeningPorts() ([]string, error)
 }
 
 // ProcessNode represents a process in a tree structure

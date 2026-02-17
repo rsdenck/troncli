@@ -98,101 +98,217 @@ func (m *UniversalProcessManager) KillZombies() (int, error) {
 	return count, nil
 }
 
-// GetProcessTree returns a tree of processes
+// GetProcessTree returns the process tree
 func (m *UniversalProcessManager) GetProcessTree() ([]ports.ProcessNode, error) {
 	ctx := context.Background()
-	// ps -e -o pid,ppid,user,stat,comm
-	res, err := m.executor.Exec(ctx, "ps", "-e", "-o", "pid,ppid,user,stat,comm")
+	// ps -eo pid,ppid,user,stat,comm
+	// We use "comm" for command name, usually truncated but sufficient for tree view
+	// "args" would be full command line
+	res, err := m.executor.Exec(ctx, "ps", "-eo", "pid,ppid,user,stat,comm")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list processes: %w", err)
 	}
 
 	lines := strings.Split(res.Stdout, "\n")
 	nodeMap := make(map[int]*ports.ProcessNode)
-	var rootNodes []ports.ProcessNode
 
-	// First pass: create nodes
+	// First pass: create all nodes
 	for i, line := range lines {
-		if i == 0 {
+		if i == 0 { // Skip header
 			continue
-		} // Skip header
+		}
 		fields := strings.Fields(line)
 		if len(fields) < 5 {
 			continue
 		}
 
-		pid, _ := strconv.Atoi(fields[0])
-		ppid, _ := strconv.Atoi(fields[1])
+		pid, err := strconv.Atoi(fields[0])
+		if err != nil {
+			continue
+		}
+		ppid, err := strconv.Atoi(fields[1])
+		if err != nil {
+			continue
+		}
 		user := fields[2]
-		stat := fields[3]
-		comm := strings.Join(fields[4:], " ")
+		state := fields[3]
+		// comm might contain spaces, so join the rest
+		name := strings.Join(fields[4:], " ")
 
 		node := &ports.ProcessNode{
-			PID:   pid,
-			PPID:  ppid,
-			Name:  comm,
-			User:  user,
-			State: stat,
+			PID:      pid,
+			PPID:     ppid,
+			Name:     name,
+			User:     user,
+			State:    state,
+			Children: []ports.ProcessNode{},
 		}
 		nodeMap[pid] = node
 	}
 
-	// Second pass: return all nodes
-	// Returning flat list is sufficient for TUI to build tree structure using PPID
-	var allNodes []ports.ProcessNode
+	// Second pass: build tree
+	var roots []ports.ProcessNode
 	for _, node := range nodeMap {
-		allNodes = append(allNodes, *node)
+		if parent, ok := nodeMap[node.PPID]; ok && node.PID != node.PPID {
+			parent.Children = append(parent.Children, *node)
+		}
 	}
-	return allNodes, nil
+
+	// Third pass: find roots (nodes whose parents are not in the map or PPID=0)
+	// Note: We need to iterate over the map again to find roots, but since we modified children by value in the previous loop?
+	// Wait, parent.Children = append(parent.Children, *node) copies the node value.
+	// If I modify the child node later, the parent's copy won't update.
+	// But here I am building bottom-up or just linking?
+	// Actually, with value semantics, it's tricky.
+	// Let's use a map of pointers to struct with pointer children first, then convert.
+	// Or simply:
+	// The requirement is just a list of nodes, and maybe the UI handles the tree?
+	// The interface says `GetProcessTree() ([]ProcessNode, error)`.
+	// If it returns a tree, it should be the root nodes with Children populated.
+
+	// Let's redo the tree building with a helper struct to avoid value copy issues during build.
+	type tempNode struct {
+		*ports.ProcessNode
+		Children []*tempNode
+	}
+	tempMap := make(map[int]*tempNode)
+
+	// Re-parse to populate tempMap
+	for i, line := range lines {
+		if i == 0 {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 5 {
+			continue
+		}
+		pid, _ := strconv.Atoi(fields[0])
+		ppid, _ := strconv.Atoi(fields[1])
+		user := fields[2]
+		state := fields[3]
+		name := strings.Join(fields[4:], " ")
+
+		tempMap[pid] = &tempNode{
+			ProcessNode: &ports.ProcessNode{
+				PID:   pid,
+				PPID:  ppid,
+				Name:  name,
+				User:  user,
+				State: state,
+			},
+		}
+	}
+
+	// Build links
+	var rootTemps []*tempNode
+	for _, node := range tempMap {
+		if parent, ok := tempMap[node.PPID]; ok && node.PID != node.PPID {
+			parent.Children = append(parent.Children, node)
+		} else {
+			rootTemps = append(rootTemps, node)
+		}
+	}
+
+	// Convert to []ports.ProcessNode recursive
+	var convert func(*tempNode) ports.ProcessNode
+	convert = func(n *tempNode) ports.ProcessNode {
+		pn := *n.ProcessNode
+		pn.Children = make([]ports.ProcessNode, len(n.Children))
+		for i, child := range n.Children {
+			pn.Children[i] = convert(child)
+		}
+		return pn
+	}
+
+	roots = make([]ports.ProcessNode, len(rootTemps))
+	for i, r := range rootTemps {
+		roots[i] = convert(r)
+	}
+
+	return roots, nil
 }
 
-// GetOpenFiles returns list of open files for a PID
+// GetOpenFiles returns list of open files for a process
 func (m *UniversalProcessManager) GetOpenFiles(pid int) ([]string, error) {
 	ctx := context.Background()
-	// lsof -p PID -F n
-	// Or read /proc/pid/fd
-
-	// /proc is faster and universal on Linux
-	fdPath := fmt.Sprintf("/proc/%d/fd", pid)
-	// We can use "ls -l /proc/pid/fd" via executor
-	res, err := m.executor.Exec(ctx, "ls", "-l", fdPath)
+	// ls -l /proc/<pid>/fd
+	res, err := m.executor.Exec(ctx, "ls", "-l", fmt.Sprintf("/proc/%d/fd", pid))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get open files for pid %d: %w", pid, err)
 	}
 
-	var files []string
 	lines := strings.Split(res.Stdout, "\n")
+	var files []string
 	for _, line := range lines {
-		// lrwx------ 1 root root 64 Feb 17 10:00 0 -> /dev/pts/0
-		parts := strings.Split(line, " -> ")
-		if len(parts) == 2 {
-			files = append(files, parts[1])
+		// lrwx------ 1 root root 64 Feb 17 ... 0 -> /dev/pts/0
+		if strings.Contains(line, " -> ") {
+			parts := strings.Split(line, " -> ")
+			if len(parts) == 2 {
+				files = append(files, parts[1])
+			}
 		}
 	}
 	return files, nil
 }
 
-// GetProcessPorts returns listening ports for a PID
+// GetProcessPorts returns ports listened by a process
 func (m *UniversalProcessManager) GetProcessPorts(pid int) ([]string, error) {
 	ctx := context.Background()
-	// ss -lptn | grep pid
-	res, err := m.executor.Exec(ctx, "ss", "-lptn")
+	// ss -l -p -n
+	// Output: Netid State Recv-Q Send-Q Local Address:Port Peer Address:PortProcess
+	// grep for pid
+	res, err := m.executor.Exec(ctx, "ss", "-lpn")
 	if err != nil {
-		return nil, err
+		// Fallback to netstat if ss fails?
+		// But instructions say "modern Linux". ss is modern.
+		return nil, fmt.Errorf("failed to get process ports: %w", err)
 	}
 
-	var ports []string
 	lines := strings.Split(res.Stdout, "\n")
+	var portsList []string
 	pidStr := fmt.Sprintf("pid=%d,", pid)
 
 	for _, line := range lines {
 		if strings.Contains(line, pidStr) {
-			// LISTEN 0 128 0.0.0.0:22 0.0.0.0:* users:(("sshd",pid=123,fd=3))
 			fields := strings.Fields(line)
-			if len(fields) >= 4 {
-				ports = append(ports, fields[3]) // Local Address:Port
+			if len(fields) >= 5 {
+				// Local Address:Port is usually field 4 (0-indexed) or 3 depending on State column
+				// ss output: Netid State Recv-Q Send-Q Local_Address:Port Peer_Address:Port Process
+				// u_str ESTAB 0 0 * 19036 * 19037 users:(("dbus-daemon",pid=584,fd=12))
+				// tcp LISTEN 0 128 0.0.0.0:22 0.0.0.0:* users:(("sshd",pid=684,fd=3))
+
+				// We want the Local Address:Port
+				// Usually index 4
+				if len(fields) > 4 {
+					portsList = append(portsList, fields[4])
+				}
 			}
 		}
 	}
-	return ports, nil
+	return portsList, nil
+}
+
+// GetAllListeningPorts returns all listening ports
+func (m *UniversalProcessManager) GetAllListeningPorts() ([]string, error) {
+	ctx := context.Background()
+	// ss -nltu
+	res, err := m.executor.Exec(ctx, "ss", "-nltu")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get listening ports: %w", err)
+	}
+
+	lines := strings.Split(res.Stdout, "\n")
+	var portsList []string
+
+	for i, line := range lines {
+		if i == 0 {
+			continue
+		} // Header
+		fields := strings.Fields(line)
+		if len(fields) >= 5 {
+			// Netid State Recv-Q Send-Q Local_Address:Port ...
+			portsList = append(portsList, fmt.Sprintf("%s/%s", fields[0], fields[4]))
+		}
+	}
+	return portsList, nil
 }

@@ -29,8 +29,8 @@ type SystemExecutor struct {
 	mu sync.Mutex // Optional: use for concurrency limiting if needed globally
 }
 
-// NewSystemExecutor creates a new executor
-func NewSystemExecutor() *SystemExecutor {
+// NewExecutor creates a new executor
+func NewExecutor() Executor {
 	return &SystemExecutor{}
 }
 
@@ -47,11 +47,11 @@ func (e *SystemExecutor) ExecWithInput(ctx context.Context, input string, comman
 	start := time.Now()
 
 	cmd := exec.CommandContext(ctx, command, args...)
-	
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	
+
 	if input != "" {
 		cmd.Stdin = strings.NewReader(input)
 	}

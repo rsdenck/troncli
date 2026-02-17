@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/banner.png" width="100%" alt="TRONCLI" />
+
 <table>
 <tr>
 <td align="left" width="55%">
@@ -104,15 +106,7 @@ internal/
   ui/            # TUI Layer (tview/tcell)
 ```
 
-### Contribution
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'feat: Add AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
 ### Security
 
-Please report vulnerabilities to `security@troncli.local`.
+Please report vulnerabilities to `ranlens.denck@protonmnail.com`.
 See [SECURITY.md](SECURITY.md) for details.

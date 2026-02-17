@@ -107,6 +107,31 @@ func (m *UniversalPackageManager) Update() error {
 	return err
 }
 
+// Upgrade upgrades the system packages
+func (m *UniversalPackageManager) Upgrade() error {
+	ctx := context.Background()
+	var args []string
+	cmd := m.profile.PackageManager
+
+	switch cmd {
+	case "apt":
+		args = []string{"upgrade", "-y"}
+	case "dnf", "yum":
+		args = []string{"upgrade", "-y"}
+	case "pacman":
+		args = []string{"-Syu", "--noconfirm"}
+	case "zypper":
+		args = []string{"update", "-y"}
+	case "apk":
+		args = []string{"upgrade"}
+	default:
+		return fmt.Errorf("unsupported package manager: %s", cmd)
+	}
+
+	_, err := m.executor.Exec(ctx, cmd, args...)
+	return err
+}
+
 // Search searches for a package
 func (m *UniversalPackageManager) Search(query string) ([]ports.PackageInfo, error) {
 	ctx := context.Background()

@@ -183,3 +183,79 @@ func (m *UniversalDiskManager) GetInodeUsage(path string) (int, int, error) {
 	}
 	return int(usage.Files - usage.FilesFree), int(usage.Files), nil
 }
+
+// Cleanup frees disk space by cleaning package caches and logs
+func (m *UniversalDiskManager) Cleanup() error {
+	ctx := context.Background()
+
+	// Package cleanup based on detected manager
+	if m.profile.PackageManager == "apt" {
+		m.executor.Exec(ctx, "apt-get", "clean")
+		m.executor.Exec(ctx, "apt-get", "autoremove", "-y")
+	} else if m.profile.PackageManager == "dnf" || m.profile.PackageManager == "yum" {
+		m.executor.Exec(ctx, "dnf", "clean", "all")
+	} else if m.profile.PackageManager == "pacman" {
+		m.executor.Exec(ctx, "pacman", "-Sc", "--noconfirm")
+	}
+
+	// Journal cleanup
+	// journalctl --vacuum-time=2d
+	// Ignore error if journalctl is missing (e.g. docker)
+	m.executor.Exec(ctx, "journalctl", "--vacuum-time=2d")
+
+	return nil
+}
+
+// GetDiskHealth returns simple health status
+func (m *UniversalDiskManager) GetDiskHealth() (string, error) {
+	// Check root usage
+	usage, err := m.GetFilesystemUsage("/")
+	if err != nil {
+		return "Unknown", err
+	}
+
+	if usage.Total == 0 {
+		return "Unknown", nil
+	}
+
+	percent := (float64(usage.Used) / float64(usage.Total)) * 100
+	if percent > 90 {
+		return "Critical", nil
+	}
+	if percent > 80 {
+		return "Warning", nil
+	}
+	return "Healthy", nil
+}
+
+// Mount mounts a filesystem
+func (m *UniversalDiskManager) Mount(source, target, fstype, options string) error {
+	args := []string{}
+	if fstype != "" {
+		args = append(args, "-t", fstype)
+	}
+	if options != "" {
+		args = append(args, "-o", options)
+	}
+	args = append(args, source, target)
+
+	_, err := m.executor.Exec(context.Background(), "mount", args...)
+	return err
+}
+
+// Unmount unmounts a filesystem
+func (m *UniversalDiskManager) Unmount(target string) error {
+	_, err := m.executor.Exec(context.Background(), "umount", target)
+	return err
+}
+
+// Format formats a device
+func (m *UniversalDiskManager) Format(device, fstype string) error {
+	if fstype == "" {
+		fstype = "ext4"
+	}
+	// mkfs.fstype
+	cmd := fmt.Sprintf("mkfs.%s", fstype)
+	_, err := m.executor.Exec(context.Background(), cmd, device)
+	return err
+}

@@ -1,17 +1,9 @@
 package main
 
 import (
-	"log"
-
-	"github.com/mascli/troncli/internal/ui"
+	"github.com/mascli/troncli/cmd/troncli/commands"
 )
 
 func main() {
-	app, err := ui.NewApp()
-	if err != nil {
-		log.Fatalf("Failed to initialize application: %v", err)
-	}
-	if err := app.Run(); err != nil {
-		log.Fatalf("Error running application: %v", err)
-	}
+	commands.Execute()
 }
