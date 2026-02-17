@@ -16,7 +16,7 @@ func NewLinuxServiceManager() ports.ServiceManager {
 	return &LinuxServiceManager{}
 }
 
-func (m *LinuxServiceManager) ListServices() ([]ports.ServiceStatus, error) {
+func (m *LinuxServiceManager) ListServices() ([]ports.ServiceUnit, error) {
 	// systemctl list-units --type=service --all
 	cmd := exec.Command("systemctl", "list-units", "--type=service", "--all", "--no-pager", "--plain")
 	output, err := cmd.Output()
@@ -24,15 +24,15 @@ func (m *LinuxServiceManager) ListServices() ([]ports.ServiceStatus, error) {
 		return nil, err
 	}
 
-	var services []ports.ServiceStatus
+	var services []ports.ServiceUnit
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) >= 4 {
-			services = append(services, ports.ServiceStatus{
-				Name:   fields[0],
-				Status: fields[2], // active/inactive
-				State:  fields[3], // running/exited/dead
+			services = append(services, ports.ServiceUnit{
+				Name:        fields[0],
+				Status:      fields[2], // active/inactive
+				ActiveState: fields[3], // running/exited/dead
 			})
 		}
 	}
@@ -51,38 +51,21 @@ func (m *LinuxServiceManager) RestartService(name string) error {
 	return exec.Command("systemctl", "restart", name).Run()
 }
 
-func (m *LinuxServiceManager) GetServiceStatus(name string) (*ports.ServiceStatus, error) {
+func (m *LinuxServiceManager) GetServiceStatus(name string) (string, error) {
 	// systemctl status name
-	cmd := exec.Command("systemctl", "status", name, "--no-pager")
+	cmd := exec.Command("systemctl", "is-active", name)
 	output, err := cmd.Output()
-	// Exit code 3 means inactive, which is fine, but Run() might return error.
-	// We should parse output.
-	status := "unknown"
-	state := "unknown"
+	// Exit code != 0 means inactive or failed usually
 
+	status := strings.TrimSpace(string(output))
 	if err != nil {
-		// If service not found or error
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if exitError.ExitCode() == 4 {
-				return nil, fmt.Errorf("service not found")
-			}
+		// Try to see if it exists
+		if status == "" {
+			return "unknown", err
 		}
 	}
 
-	outStr := string(output)
-	if strings.Contains(outStr, "Active: active (running)") {
-		status = "active"
-		state = "running"
-	} else if strings.Contains(outStr, "Active: inactive") {
-		status = "inactive"
-		state = "dead"
-	}
-
-	return &ports.ServiceStatus{
-		Name:   name,
-		Status: status,
-		State:  state,
-	}, nil
+	return status, nil
 }
 
 func (m *LinuxServiceManager) GetServiceLogs(name string, lines int) (string, error) {

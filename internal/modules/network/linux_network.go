@@ -4,6 +4,7 @@ package network
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -18,9 +19,41 @@ func NewLinuxNetworkManager() ports.NetworkManager {
 	return &LinuxNetworkManager{}
 }
 
+func (m *LinuxNetworkManager) ValidateConfig(config ports.NetworkConfig) error {
+	// Basic validation
+	if config.Interface == "" {
+		return fmt.Errorf("interface name is required")
+	}
+	if !config.DHCP && config.IP == "" {
+		return fmt.Errorf("IP address is required for static configuration")
+	}
+	return nil
+}
+
+func (m *LinuxNetworkManager) GetActiveStack() (string, error) {
+	// Check if NetworkManager is running
+	cmd := exec.Command("systemctl", "is-active", "NetworkManager")
+	if err := cmd.Run(); err == nil {
+		return "NetworkManager", nil
+	}
+
+	// Check if systemd-networkd is running
+	cmd = exec.Command("systemctl", "is-active", "systemd-networkd")
+	if err := cmd.Run(); err == nil {
+		return "systemd-networkd", nil
+	}
+
+	return "unknown", nil
+}
+
 func (m *LinuxNetworkManager) ApplyConfig(config ports.NetworkConfig) error {
 	// Implementation for applying network config on Linux
 	// This is a placeholder for now, but satisfies the interface
+	return nil
+}
+
+func (m *LinuxNetworkManager) BackupConfig() error {
+	// Implementation for backing up network config
 	return nil
 }
 

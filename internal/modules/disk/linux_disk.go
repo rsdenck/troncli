@@ -19,17 +19,17 @@ func NewLinuxDiskManager() ports.DiskManager {
 	return &LinuxDiskManager{}
 }
 
-// lsblkOutput represents the JSON structure from lsblk -J
-type lsblkOutput struct {
-	BlockDevices []blockDeviceJSON `json:"blockdevices"`
+// lsblkOutputLinux represents the JSON structure from lsblk -J
+type lsblkOutputLinux struct {
+	BlockDevices []blockDeviceJSONLinux `json:"blockdevices"`
 }
 
-type blockDeviceJSON struct {
-	Name       string            `json:"name"`
-	Size       string            `json:"size"`
-	Type       string            `json:"type"`
-	MountPoint string            `json:"mountpoint"`
-	Children   []blockDeviceJSON `json:"children,omitempty"`
+type blockDeviceJSONLinux struct {
+	Name       string                 `json:"name"`
+	Size       string                 `json:"size"`
+	Type       string                 `json:"type"`
+	MountPoint string                 `json:"mountpoint"`
+	Children   []blockDeviceJSONLinux `json:"children,omitempty"`
 }
 
 func (m *LinuxDiskManager) ListBlockDevices() ([]ports.BlockDevice, error) {
@@ -39,35 +39,35 @@ func (m *LinuxDiskManager) ListBlockDevices() ([]ports.BlockDevice, error) {
 		return nil, fmt.Errorf("lsblk failed: %w", err)
 	}
 
-	var result lsblkOutput
+	var result lsblkOutputLinux
 	if err := json.Unmarshal(output, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse lsblk json: %w", err)
 	}
 
-	return convertDevices(result.BlockDevices), nil
+	return convertDevicesLinux(result.BlockDevices), nil
 }
 
-func convertDevices(devices []blockDeviceJSON) []ports.BlockDevice {
+func convertDevicesLinux(devices []blockDeviceJSONLinux) []ports.BlockDevice {
 	var result []ports.BlockDevice
-	for _, dev := range devices {
-		bd := ports.BlockDevice{
-			Name:       dev.Name,
-			Size:       dev.Size,
-			Type:       dev.Type,
-			MountPoint: dev.MountPoint,
+	for _, d := range devices {
+		dev := ports.BlockDevice{
+			Name:       d.Name,
+			Size:       d.Size,
+			Type:       d.Type,
+			MountPoint: d.MountPoint,
 		}
-		if len(dev.Children) > 0 {
-			bd.Children = convertDevices(dev.Children)
+		if len(d.Children) > 0 {
+			dev.Children = convertDevicesLinux(d.Children)
 		}
-		result = append(result, bd)
+		result = append(result, dev)
 	}
 	return result
 }
 
-func (m *LinuxDiskManager) GetUsage(path string) (*ports.DiskUsage, error) {
+func (m *LinuxDiskManager) GetFilesystemUsage(path string) (ports.FilesystemUsage, error) {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(path, &stat); err != nil {
-		return nil, err
+		return ports.FilesystemUsage{}, err
 	}
 
 	// Bsize is uint32 on some archs (e.g. arm), uint64 on others. Cast to uint64 to be safe.
@@ -76,18 +76,60 @@ func (m *LinuxDiskManager) GetUsage(path string) (*ports.DiskUsage, error) {
 	free := stat.Bfree * bsize
 	used := total - free
 
-	usagePercent := 0.0
-	if total > 0 {
-		usagePercent = float64(used) / float64(total) * 100
-	}
+	// Get Inodes
+	files := stat.Files
+	filesFree := stat.Ffree
 
-	return &ports.DiskUsage{
-		Path:         path,
-		TotalBytes:   total,
-		UsedBytes:    used,
-		FreeBytes:    free,
-		UsagePercent: usagePercent,
+	return ports.FilesystemUsage{
+		Path:      path,
+		Total:     total,
+		Used:      used,
+		Free:      free,
+		Files:     files,
+		FilesFree: filesFree,
 	}, nil
+}
+
+func (m *LinuxDiskManager) Format(device, fstype string) error {
+	// mkfs.fstype device
+	cmd := exec.Command(fmt.Sprintf("mkfs.%s", fstype), device)
+	return cmd.Run()
+}
+
+func (m *LinuxDiskManager) GetInodeUsage(path string) (int, int, error) {
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(path, &stat); err != nil {
+		return 0, 0, err
+	}
+	return int(stat.Files - stat.Ffree), int(stat.Files), nil
+}
+
+func (m *LinuxDiskManager) GetTopFiles(path string, count int) ([]ports.FileNode, error) {
+	// find path -type f -exec du -h {} + | sort -rh | head -n count
+	// Simplified: just return empty for now or use 'du'
+	return nil, nil
+}
+
+func (m *LinuxDiskManager) Mount(source, target, fstype, options string) error {
+	args := []string{"mount"}
+	if fstype != "" {
+		args = append(args, "-t", fstype)
+	}
+	if options != "" {
+		args = append(args, "-o", options)
+	}
+	args = append(args, source, target)
+	return exec.Command(args[0], args[1:]...).Run()
+}
+
+func (m *LinuxDiskManager) Unmount(target string) error {
+	return exec.Command("umount", target).Run()
+}
+
+func (m *LinuxDiskManager) GetDiskHealth() (string, error) {
+	// smartctl -H /dev/sda (requires root and knowing the device)
+	// For now return "unknown" or check logs
+	return "unknown", nil
 }
 
 func (m *LinuxDiskManager) Cleanup() error {

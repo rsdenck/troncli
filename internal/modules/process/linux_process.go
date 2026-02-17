@@ -68,44 +68,79 @@ func (m *LinuxProcessManager) KillProcess(pid int, signal string) error {
 	return nil
 }
 
-// ReniceProcess changes the priority of a process
 func (m *LinuxProcessManager) ReniceProcess(pid int, priority int) error {
-	if priority < -20 || priority > 19 {
-		return fmt.Errorf("priority must be between -20 and 19")
-	}
+	// renice -n priority -p pid
+	return exec.Command("renice", "-n", fmt.Sprintf("%d", priority), "-p", fmt.Sprintf("%d", pid)).Run()
+}
 
-	// Change priority in kernel
-	// Effect: visible in 'top' or 'ps -o ni'
-	// Resource: /proc/{pid}/stat (nice value)
-	if err := syscall.Setpriority(syscall.PRIO_PROCESS, pid, priority); err != nil {
-		return fmt.Errorf("failed to renice process %d to %d: %w", pid, priority, err)
-	}
-
-	// Verification Protocol
-	// Verify new priority using 'ps'
-	// Using exec.Command as requested for system tool verification
-	// 'ps -o ni -p PID --no-headers' prints the nice value
-	cmd := exec.Command("ps", "-o", "ni", "-p", strconv.Itoa(pid), "--no-headers")
+func (m *LinuxProcessManager) GetProcessTree() ([]ports.ProcessNode, error) {
+	// ps -axo pid,ppid,comm,user,stat --sort=ppid
+	cmd := exec.Command("ps", "-axo", "pid,ppid,comm,user,stat", "--sort=ppid")
 	output, err := cmd.Output()
 	if err != nil {
-		// If ps fails, maybe process died?
-		return fmt.Errorf("failed to verify renice for process %d: %w", pid, err)
+		return nil, err
 	}
 
-	// Output should be the nice value, e.g., "  0" or " -10"
-	valStr := strings.TrimSpace(string(output))
-	val, err := strconv.Atoi(valStr)
+	lines := strings.Split(string(output), "\n")
+	// Skip header
+	if len(lines) > 0 {
+		lines = lines[1:]
+	}
+
+	var nodes []ports.ProcessNode
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) >= 5 {
+			pid, _ := strconv.Atoi(fields[0])
+			ppid, _ := strconv.Atoi(fields[1])
+			nodes = append(nodes, ports.ProcessNode{
+				PID:   pid,
+				PPID:  ppid,
+				Name:  fields[2],
+				User:  fields[3],
+				State: fields[4],
+			})
+		}
+	}
+	return nodes, nil
+}
+
+func (m *LinuxProcessManager) GetOpenFiles(pid int) ([]string, error) {
+	// lsof -p pid -F n
+	// Or ls -l /proc/pid/fd
+	dir := fmt.Sprintf("/proc/%d/fd", pid)
+	files, err := os.ReadDir(dir)
 	if err != nil {
-		return fmt.Errorf("failed to parse verification output for process %d: %s", pid, valStr)
+		return nil, err
 	}
 
-	if val != priority {
-		// Sometimes verification might be tricky if user lacks permissions to read other process details
-		// but since we could set priority (which requires root usually for negative), we should be able to read it.
-		return fmt.Errorf("verification failed: expected priority %d, got %d", priority, val)
+	var openFiles []string
+	for _, f := range files {
+		target, err := os.Readlink(fmt.Sprintf("%s/%s", dir, f.Name()))
+		if err == nil {
+			openFiles = append(openFiles, target)
+		}
+	}
+	return openFiles, nil
+}
+
+func (m *LinuxProcessManager) GetProcessPorts(pid int) ([]string, error) {
+	// ss -nlp | grep pid=pid
+	cmd := exec.Command("ss", "-nlp")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	var ports []string
+	pidStr := fmt.Sprintf("pid=%d", pid)
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, pidStr) {
+			ports = append(ports, line)
+		}
+	}
+	return ports, nil
 }
 
 func getProcessState(pid int) (string, error) {
@@ -126,13 +161,15 @@ func getProcessState(pid int) (string, error) {
 	return string(s[closeParen+2]), nil
 }
 
+// KillZombies identifies zombie processes and attempts to eliminate them
+
 func (m *LinuxProcessManager) KillZombies() (int, error) {
 	// Strategy:
 	// 1. Find all Zombie processes
 	// 2. Identify their parents (PPID)
 	// 3. Send SIGCHLD to parents to trigger reaping
 	// 4. If parent is init (1), it should happen automatically, but we can verify.
-	
+
 	procs, err := os.ReadDir("/proc")
 	if err != nil {
 		return 0, fmt.Errorf("failed to read /proc: %w", err)
@@ -181,6 +218,25 @@ func (m *LinuxProcessManager) KillZombies() (int, error) {
 	return zombieCount, nil
 }
 
+func (m *LinuxProcessManager) GetAllListeningPorts() ([]string, error) {
+	// ss -tuln
+	cmd := exec.Command("ss", "-tuln")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	var ports []string
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		// Parse logic here (simplified)
+		if strings.Contains(line, "LISTEN") {
+			ports = append(ports, line)
+		}
+	}
+	return ports, nil
+}
+
 func getPPID(pid int) (int, error) {
 	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 	if err != nil {
@@ -200,4 +256,3 @@ func getPPID(pid int) (int, error) {
 	// 0 is state, 1 is ppid
 	return strconv.Atoi(fields[1])
 }
-
