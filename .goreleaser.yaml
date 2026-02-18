@@ -41,3 +41,10 @@ changelog:
 sboms:
   - artifacts: archive
 
+release:
+  github:
+    owner: rsdenck
+    name: troncli
+  draft: false
+  prerelease: false
+
