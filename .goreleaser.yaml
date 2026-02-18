@@ -6,6 +6,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
       - arm64
@@ -24,9 +25,13 @@ archives:
       {{- .Version }}_
       {{- .Os }}_
       {{- .Arch }}
+    files:
+      - LICENSE
+      - README.md
 
 checksum:
   name_template: 'checksums.txt'
+  algorithm: sha256
 
 snapshot:
   name_template: "{{ .Tag }}-next"
@@ -37,6 +42,7 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+      - '^chore:'
 
 sboms:
   - artifacts: archive
