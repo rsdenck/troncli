@@ -4,7 +4,7 @@
 
 set -e
 
-REPO_OWNER="mascli"
+REPO_OWNER="rsdenck"
 REPO_NAME="troncli"
 BIN_NAME="troncli"
 INSTALL_DIR="/usr/local/bin"

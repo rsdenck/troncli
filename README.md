@@ -16,7 +16,7 @@ Download the latest release from the [Releases Page](https://github.com/mascli/t
 
 ```bash
 # Example for Linux AMD64
-wget https://github.com/mascli/troncli/releases/download/v0.2.18/troncli_0.2.18_linux_amd64.tar.gz
+wget https://github.com/rsdenck/troncli/releases/download/v0.2.18/troncli_0.2.18_linux_amd64.tar.gz
 tar -xzf troncli_0.2.18_linux_amd64.tar.gz
 sudo mv troncli /usr/local/bin/
 ```
