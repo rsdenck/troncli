@@ -20,7 +20,7 @@ func TestCapabilityRegistry(t *testing.T) {
   - audit_security
 `
 	configPath := filepath.Join(tmpDir, "capabilities.yaml")
-	if err := os.WriteFile(configPath, []byte(yamlContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(yamlContent), 0600); err != nil {
 		t.Fatal(err)
 	}
 

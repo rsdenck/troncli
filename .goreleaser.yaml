@@ -7,10 +7,12 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
       - arm64
+      - arm
+    goarm:
+      - 7
     flags:
       - -trimpath
     ldflags:
@@ -22,7 +24,7 @@ builds:
 archives:
   - formats: 
       - tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     files:
       - LICENSE
       - README.md
@@ -42,10 +44,22 @@ changelog:
       - '^test:'
       - '^chore:'
 
-sboms:
-  - artifacts: archive
+nfpms:
+  - file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    homepage: https://github.com/mascli/troncli
+    maintainer: "TronCLI Maintainers <maintainers@troncli.com>"
+    description: "TronCLI - Advanced Linux System Management CLI"
+    license: "MIT"
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/local/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/troncli/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/troncli/README.md
 
 release:
   draft: false
   prerelease: false
-
