@@ -12,7 +12,7 @@ func TestCapabilityRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	yamlContent := `allowed_intents:
   - install_package
@@ -31,7 +31,7 @@ func TestCapabilityRegistry(t *testing.T) {
 	}
 
 	// 3. Test Allowed
-	// Note: Current implementation requires exact match or logic update. 
+	// Note: Current implementation requires exact match or logic update.
 	// For this test, we assume exact match or simple prefix if we updated registry.go.
 	// Since registry.go uses ==, we must use exact string from allowed list.
 	if !registry.IsIntentAllowed("install_package") {
@@ -45,19 +45,19 @@ func TestCapabilityRegistry(t *testing.T) {
 	if registry.IsIntentAllowed("delete_system") {
 		t.Errorf("Expected delete_system to be denied")
 	}
-	
+
 	// 5. Test Partial Match logic (if implemented)
 	// Usually IsIntentAllowed checks if intent starts with or contains allowed keyword.
 	// In my implementation:
 	/*
-	func (r *CapabilityRegistry) IsIntentAllowed(intent string) bool {
-		for _, allowed := range r.AllowedIntents {
-			if strings.Contains(intent, allowed) {
-				return true
+		func (r *CapabilityRegistry) IsIntentAllowed(intent string) bool {
+			for _, allowed := range r.AllowedIntents {
+				if strings.Contains(intent, allowed) {
+					return true
+				}
 			}
+			return false
 		}
-		return false
-	}
 	*/
 	// So "install_package nginx" contains "install_package" -> True.
 }

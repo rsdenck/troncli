@@ -78,7 +78,7 @@ func (r *CapabilityRegistry) Save() error {
 		return fmt.Errorf("failed to marshal capabilities: %w", err)
 	}
 
-	if err := os.WriteFile(r.Path, data, 0644); err != nil {
+	if err := os.WriteFile(r.Path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write capabilities file: %w", err)
 	}
 

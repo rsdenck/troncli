@@ -1,5 +1,7 @@
 package agent
 
+// Package agent provides AI agent adapters and capabilities.
+
 import "context"
 
 // AgentAdapter defines the interface for AI agents

@@ -90,14 +90,14 @@ func (a *OllamaAdapter) SendPrompt(ctx context.Context, prompt string) (string, 
 func (a *OllamaAdapter) ExecuteIntent(ctx context.Context, intent string) (string, error) {
 	// In a real implementation, the LLM would classify the intent first.
 	// We send the intent as a prompt to get the command.
-	
+
 	// Check if intent is allowed
 	if !a.Registry.IsIntentAllowed(intent) {
 		return "", fmt.Errorf("intent '%s' is not allowed by policy", intent)
 	}
 
 	prompt := fmt.Sprintf("You are a Linux command generator. Output ONLY the shell command to execute the following intent, with no markdown, no explanations. Intent: %s", intent)
-	
+
 	command, err := a.SendPrompt(ctx, prompt)
 	if err != nil {
 		return "", err

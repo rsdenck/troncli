@@ -1,5 +1,7 @@
 package themes
 
+// Package themes defines the UI themes for the application.
+
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"

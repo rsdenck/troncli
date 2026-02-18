@@ -53,7 +53,7 @@ func (v *SSHView) setupUI() {
 	})
 
 	v.list.SetChangedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
-		v.details.SetText(fmt.Sprintf("%sSelected Profile: %s%s\n\n%sPress Enter to Connect via rsd-sshm", 
+		v.details.SetText(fmt.Sprintf("%sSelected Profile: %s%s\n\n%sPress Enter to Connect via rsd-sshm",
 			themes.ColorNeonCyan, themes.ColorWhite, mainText, themes.ColorWarning))
 	})
 }
@@ -78,7 +78,7 @@ func (v *SSHView) connect(profile string) {
 		// Clear screen
 		fmt.Print("\033[H\033[2J")
 		fmt.Printf("Connecting to %s via rsd-sshm...\n", profile)
-		
+
 		err := v.client.Connect(profile)
 		if err != nil {
 			fmt.Printf("\nConnection failed: %v\nPress Enter to return...", err)

@@ -78,13 +78,13 @@ func (a *ClaudeAdapter) SendPrompt(ctx context.Context, prompt string) (string, 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Claude connection failed: %w", err)
+		return "", fmt.Errorf("claude connection failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("Claude API error (status %d): %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("claude API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
 	var claudeResp claudeResponse

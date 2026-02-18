@@ -59,7 +59,7 @@ func (v *DiskView) refreshData() {
 	var addDevice func(d ports.BlockDevice, prefix string)
 	addDevice = func(d ports.BlockDevice, prefix string) {
 		name := prefix + d.Name
-		
+
 		usageStr := "-"
 		if d.MountPoint != "" {
 			usage, err := v.manager.GetFilesystemUsage(d.MountPoint)
