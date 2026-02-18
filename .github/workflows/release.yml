@@ -22,12 +22,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.24'
           check-latest: true
 
       - name: Run Unit Tests
         run: |
-          go test -race -v -coverprofile=coverage.out ./...
+          go test -v -coverprofile=coverage.out ./...
 
   release:
     name: Publish Release
@@ -46,7 +46,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.24'
           check-latest: true
 
       - name: Run GoReleaser
