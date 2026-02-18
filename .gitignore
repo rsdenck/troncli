@@ -22,3 +22,13 @@ go.work.sum
 # OS
 .DS_Store
 Thumbs.db
+
+# Test artifacts
+*.out
+coverage*
+
+# Temporary binaries
+audit
+process
+scheduler
+service

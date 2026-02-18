@@ -10,13 +10,12 @@ type LocalAgent struct {
 	Registry *CapabilityRegistry
 }
 
-func NewLocalAgent(registryPath string) *LocalAgent {
+func NewLocalAgent(registryPath string) (*LocalAgent, error) {
 	reg := NewCapabilityRegistry(registryPath)
 	if err := reg.Load(); err != nil {
-		// Log warning or handle error
-		fmt.Printf("Warning: Failed to load capabilities: %v\n", err)
+		return nil, fmt.Errorf("failed to load capabilities: %w", err)
 	}
-	return &LocalAgent{Registry: reg}
+	return &LocalAgent{Registry: reg}, nil
 }
 
 func (a *LocalAgent) Name() string {
@@ -24,12 +23,14 @@ func (a *LocalAgent) Name() string {
 }
 
 func (a *LocalAgent) SendPrompt(ctx context.Context, prompt string) (string, error) {
-	return "Processing locally...", nil
+	return "", fmt.Errorf("local agent implementation not available")
 }
 
 func (a *LocalAgent) ExecuteIntent(ctx context.Context, intent string) (string, error) {
 	if !a.Registry.IsIntentAllowed(intent) {
 		return "", fmt.Errorf("intent '%s' is not allowed by policy", intent)
 	}
-	return fmt.Sprintf("Executing allowed intent: %s", intent), nil
+	// Real implementation requires a local reasoning engine which is not yet integrated.
+	// Abort rather than mock.
+	return "", fmt.Errorf("local execution engine not ready for intent: %s", intent)
 }

@@ -3,9 +3,11 @@ package audit
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,11 +55,24 @@ func (m *UniversalAuditManager) AnalyzeSudo(since time.Duration) ([]ports.AuditE
 
 func (m *UniversalAuditManager) AnalyzeLogins(since time.Duration) ([]ports.AuditEvent, error) {
 	ctx := context.Background()
-	// last -n 50 -F
-	res, err := m.executor.Exec(ctx, "last", "-n", "50", "-F")
+	// last -n 50 -F -i (Show IP always, Full date)
+	res, err := m.executor.Exec(ctx, "last", "-n", "50", "-F", "-i")
 	if err != nil {
-		return nil, err
+		// Fallback without -i if it fails (some busybox/older versions might not support -i)
+		res, err = m.executor.Exec(ctx, "last", "-n", "50", "-F")
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	// Regex for last -F -i
+	// root     pts/0        0.0.0.0          Fri Feb 17 10:00:00 2026   still logged in
+	// user     pts/0        192.168.1.50     Fri Feb 17 10:00:00 2026 - Fri Feb 17 ...
+	// Group 1: User
+	// Group 2: TTY
+	// Group 3: IP
+	// Group 4: Date start
+	reLast := regexp.MustCompile(`^(\S+)\s+(\S+)\s+(\S+)\s+(\w+\s+\w+\s+\d+\s+\d+:\d+:\d+\s+\d+)`)
 
 	var events []ports.AuditEvent
 	lines := strings.Split(res.Stdout, "\n")
@@ -65,43 +80,78 @@ func (m *UniversalAuditManager) AnalyzeLogins(since time.Duration) ([]ports.Audi
 		if line == "" || strings.HasPrefix(line, "wtmp begins") {
 			continue
 		}
-		parts := strings.Fields(line)
-		if len(parts) >= 10 {
-			// user pts/0 192.168.1.10 Fri Feb 17 10:00:00 2026
-			user := parts[0]
-			ip := parts[2]
+		
+		matches := reLast.FindStringSubmatch(line)
+		if len(matches) >= 5 {
+			user := matches[1]
+			tty := matches[2]
+			ip := matches[3]
+			dateStr := matches[4]
 
-			// Simple check if within duration (approximate for now without complex date parsing)
-			// For a real implementation, we would parse the date.
-			// Given the complexity of `last` date format and "since", we rely on `last` output mostly.
+			// Parse date
+			// Mon Jan 02 15:04:05 2006
+			timestamp, _ := time.Parse(time.UnixDate, dateStr) // approximate, actually `Fri Feb 17 10:00:00 2026` is close to UnixDate/RubyDate
+			// Standard date format in `last -F`: "Fri Feb 17 10:00:00 2026"
+			// Go layout: "Mon Jan _2 15:04:05 2006"
+			if t, err := time.Parse("Mon Jan _2 15:04:05 2006", dateStr); err == nil {
+				timestamp = t
+			}
+
+			if time.Since(timestamp) > since {
+				continue
+			}
 
 			events = append(events, ports.AuditEvent{
 				Type:      "LOGIN_SUCCESS",
 				User:      user,
 				IP:        ip,
-				Message:   line,
+				Message:   fmt.Sprintf("Login on %s from %s", tty, ip),
 				Severity:  "INFO",
-				Timestamp: time.Now(), // Placeholder
+				Timestamp: timestamp,
 			})
 		}
 	}
 	return events, nil
 }
 
-func (m *UniversalAuditManager) parseLogs(output string, logType string) []ports.AuditEvent {
+func (m *UniversalAuditManager) parseLogs(output string, logType string, since time.Duration) []ports.AuditEvent {
 	var events []ports.AuditEvent
 	scanner := bufio.NewScanner(strings.NewReader(output))
 
 	// Regex for SSH failures
-	// Feb 17 10:00:00 host sshd[123]: Failed password for invalid user admin from 192.168.1.50 port 55555 ssh2
 	reSSHFail := regexp.MustCompile(`Failed password for (?:invalid user )?(\S+) from (\S+)`)
-
+	
 	// Regex for Sudo
-	// Feb 17 10:00:00 host sudo:    user : TTY=pts/0 ; PWD=/home/user ; USER=root ; COMMAND=/bin/ls
 	reSudo := regexp.MustCompile(`sudo:\s+(\S+)\s*:.*COMMAND=(.*)`)
+
+	currentYear := time.Now().Year()
+	cutoff := time.Now().Add(-since)
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		if len(line) < 16 {
+			continue
+		}
+
+		// Parse syslog date: "Feb 17 10:00:00"
+		// Go layout: "Jan _2 15:04:05"
+		dateStr := line[:15]
+		timestamp, err := time.Parse("Jan _2 15:04:05", dateStr)
+		if err != nil {
+			continue
+		}
+		
+		// Add year (syslog usually doesn't have year)
+		timestamp = timestamp.AddDate(currentYear, 0, 0)
+		
+		// Handle year wraparound (e.g. reading Dec logs in Jan)
+		if timestamp.After(time.Now().Add(24 * time.Hour)) {
+			timestamp = timestamp.AddDate(-1, 0, 0)
+		}
+
+		if timestamp.Before(cutoff) {
+			continue
+		}
 
 		if logType == "sshd" {
 			matches := reSSHFail.FindStringSubmatch(line)
@@ -112,7 +162,7 @@ func (m *UniversalAuditManager) parseLogs(output string, logType string) []ports
 					IP:        matches[2],
 					Message:   line,
 					Severity:  "WARNING",
-					Timestamp: time.Now(), // Placeholder
+					Timestamp: timestamp,
 				})
 			}
 		} else if logType == "sudo" {
@@ -123,7 +173,7 @@ func (m *UniversalAuditManager) parseLogs(output string, logType string) []ports
 					User:      matches[1],
 					Message:   fmt.Sprintf("Command: %s", matches[2]),
 					Severity:  "INFO",
-					Timestamp: time.Now(), // Placeholder
+					Timestamp: timestamp,
 				})
 			}
 		}
@@ -131,250 +181,102 @@ func (m *UniversalAuditManager) parseLogs(output string, logType string) []ports
 	return events
 }
 
+// JournalEntry represents a JSON entry from journalctl
+type JournalEntry struct {
+	Message          string `json:"MESSAGE"`
+	SyslogIdentifier string `json:"SYSLOG_IDENTIFIER"`
+	Realtime         string `json:"__REALTIME_TIMESTAMP"` // Microseconds since epoch
+	Hostname         string `json:"_HOSTNAME"`
+	PID              string `json:"_PID"`
+	UID              string `json:"_UID"`
+	GID              string `json:"_GID"`
+	Comm             string `json:"_COMM"`
+	Priority         string `json:"PRIORITY"` // 0-7 string
+	SystemdUnit      string `json:"_SYSTEMD_UNIT"`
+}
+
+// AnalyzeFileChanges analyzes file changes in the given paths within the specified duration
+func (m *UniversalAuditManager) AnalyzeFileChanges(paths []string, since time.Duration) ([]ports.AuditEvent, error) {
+	// TODO: Implement file change analysis using auditd or fsnotify
+	// For now, return empty list to satisfy interface
+	return []ports.AuditEvent{}, nil
+}
+
+// AuditUsers checks user accounts for security issues
+func (m *UniversalAuditManager) AuditUsers() ([]ports.UserAudit, error) {
+	// TODO: Implement user auditing (check for empty passwords, uid 0, etc)
+	return []ports.UserAudit{}, nil
+}
+
+// CheckPrivilegedGroups checks for users in privileged groups
+func (m *UniversalAuditManager) CheckPrivilegedGroups() ([]string, error) {
+	// TODO: Implement group auditing
+	return []string{}, nil
+}
+
+// CheckBashCompatibility checks for bash configuration issues
+func (m *UniversalAuditManager) CheckBashCompatibility() ([]string, error) {
+	// TODO: Implement bash checks
+	return []string{}, nil
+}
+
+// analyzeJournal queries journalctl for logs
 func (m *UniversalAuditManager) analyzeJournal(service string, since time.Duration) ([]ports.AuditEvent, error) {
 	ctx := context.Background()
-	// journalctl -u service --since "X" --no-pager
-	// Using --output=cat or just plain text for regex parsing in parseLogs
 	sinceStr := time.Now().Add(-since).Format("2006-01-02 15:04:05")
-	res, err := m.executor.Exec(ctx, "journalctl", "-u", service, "--since", sinceStr, "--no-pager")
-	if err != nil {
-		return nil, err
-	}
-	return m.parseLogs(res.Stdout, service), nil
-}
 
-func (m *UniversalAuditManager) analyzeLogFile(logFile string, service string, since time.Duration) ([]ports.AuditEvent, error) {
-	ctx := context.Background()
-	// grep service logFile
-	// grep returns exit code 1 if no match, which executor might treat as error
-	res, err := m.executor.Exec(ctx, "grep", service, logFile)
-	if err != nil {
-		// If grep fails (no matches), return empty list instead of error
-		return []ports.AuditEvent{}, nil
-	}
-	return m.parseLogs(res.Stdout, service), nil
-}
-
-// AuditUsers checks for user issues
-func (m *UniversalAuditManager) AuditUsers() ([]ports.UserAudit, error) {
-	// Parse /etc/passwd and /etc/shadow (requires root)
-	// Using generic "cat" via executor
-	ctx := context.Background()
-
-	// Passwd
-	res, err := m.executor.Exec(ctx, "cat", "/etc/passwd")
-	if err != nil {
-		return nil, err
-	}
-	passwdLines := strings.Split(res.Stdout, "\n")
-
-	// Shadow (might fail if not root)
-	resShadow, _ := m.executor.Exec(ctx, "cat", "/etc/shadow")
-	shadowMap := make(map[string]string) // user -> hash
-	if resShadow != nil {
-		for _, line := range strings.Split(resShadow.Stdout, "\n") {
-			parts := strings.Split(line, ":")
-			if len(parts) > 1 {
-				shadowMap[parts[0]] = parts[1]
-			}
-		}
-	}
-
-	var users []ports.UserAudit
-	uidMap := make(map[string]bool)
-
-	for _, line := range passwdLines {
-		parts := strings.Split(line, ":")
-		if len(parts) < 7 {
-			continue
-		}
-
-		username := parts[0]
-		uid := parts[2]
-
-		audit := ports.UserAudit{
-			Username: username,
-			UID:      uid,
-			GID:      parts[3],
-			Home:     parts[5],
-			Shell:    parts[6],
-		}
-
-		// Check duplicate UID
-		if uidMap[uid] {
-			audit.Message = "Duplicate UID"
-		}
-		uidMap[uid] = true
-
-		// Check Shadow
-		if hash, ok := shadowMap[username]; ok {
-			if hash == "" || hash == "*" || hash == "!" {
-				audit.PasswordStatus = "Locked/Empty"
-			} else {
-				audit.PasswordStatus = "Valid"
-			}
-			// Check expiration fields in shadow would require more parsing of parts[2] etc.
-		}
-
-		// Check SSH keys
-		sshDir := fmt.Sprintf("%s/.ssh", audit.Home)
-		if _, err := os.Stat(sshDir); err == nil {
-			// Check permissions (should be 700)
-			// stat -c %a
-			res, _ := m.executor.Exec(ctx, "stat", "-c", "%a", sshDir)
-			if res != nil && strings.TrimSpace(res.Stdout) != "700" {
-				audit.SSHPermissions = "Unsafe (" + strings.TrimSpace(res.Stdout) + ")"
-			} else {
-				audit.SSHPermissions = "Safe"
-			}
-
-			// Check authorized_keys for invalid keys (basic check)
-			authKeys := fmt.Sprintf("%s/authorized_keys", sshDir)
-			if _, err := os.Stat(authKeys); err == nil {
-				resKeys, _ := m.executor.Exec(ctx, "cat", authKeys)
-				if resKeys != nil {
-					if strings.Contains(resKeys.Stdout, "ssh-dss") { // Deprecated
-						audit.SSHKeysInvalid = true
-						audit.Message += " Deprecated DSA key found;"
-					}
-				}
-			}
-		}
-
-		users = append(users, audit)
-	}
-	return users, nil
-}
-
-func (m *UniversalAuditManager) CheckPrivilegedGroups() ([]string, error) {
-	ctx := context.Background()
-	res, err := m.executor.Exec(ctx, "cat", "/etc/group")
-	if err != nil {
-		return nil, err
-	}
-
-	var privilegedUsers []string
-	targetGroups := map[string]bool{"sudo": true, "wheel": true, "adm": true, "root": true}
-
-	lines := strings.Split(res.Stdout, "\n")
-	for _, line := range lines {
-		// sudo:x:27:user1,user2
-		parts := strings.Split(line, ":")
-		if len(parts) >= 4 {
-			groupName := parts[0]
-			if targetGroups[groupName] {
-				users := parts[3]
-				if users != "" {
-					userList := strings.Split(users, ",")
-					for _, u := range userList {
-						privilegedUsers = append(privilegedUsers, fmt.Sprintf("%s (%s)", u, groupName))
-					}
-				}
-			}
-		}
-	}
-	return privilegedUsers, nil
-}
-
-func (m *UniversalAuditManager) CheckBashCompatibility() ([]string, error) {
-	var issues []string
-	ctx := context.Background()
-
-	// Get home directories from /etc/passwd
-	res, err := m.executor.Exec(ctx, "cat", "/etc/passwd")
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(res.Stdout, "\n")
-	for _, line := range lines {
-		parts := strings.Split(line, ":")
-		if len(parts) < 6 {
-			continue
-		}
-		user := parts[0]
-		home := parts[5]
-		shell := parts[6]
-
-		// Only check users with valid shells (bash/sh/zsh)
-		if !strings.Contains(shell, "sh") || strings.Contains(shell, "nologin") || strings.Contains(shell, "false") {
-			continue
-		}
-
-		filesToCheck := []string{".bashrc", ".profile", ".bash_profile", ".zshrc"}
-		for _, f := range filesToCheck {
-			path := fmt.Sprintf("%s/%s", home, f)
-			// Read file (using cat via executor)
-			// Note: This might fail if permission denied, but we try.
-			contentRes, err := m.executor.Exec(ctx, "cat", path)
-			if err == nil {
-				issues = append(issues, m.analyzeShellConfig(user, path, contentRes.Stdout)...)
-			}
-		}
-	}
-	return issues, nil
-}
-
-func (m *UniversalAuditManager) analyzeShellConfig(user, path, content string) []string {
-	var issues []string
-	lines := strings.Split(content, "\n")
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		// Check for dangerous aliases
-		if strings.Contains(line, "alias sudo") {
-			issues = append(issues, fmt.Sprintf("[%s] %s: Dangerous alias 'sudo' found on line %d", user, path, i+1))
-		}
-
-		// Check for unsafe PATH
-		if strings.Contains(line, "export PATH=.:") || strings.Contains(line, "export PATH=:") || strings.Contains(line, "::") {
-			issues = append(issues, fmt.Sprintf("[%s] %s: Unsafe PATH (current directory) found on line %d", user, path, i+1))
-		}
-
-		// Check for suspicious permissions changes
-		if strings.Contains(line, "chmod 777") || strings.Contains(line, "chmod -R 777") {
-			issues = append(issues, fmt.Sprintf("[%s] %s: Suspicious 'chmod 777' found on line %d", user, path, i+1))
-		}
-
-		// Check for rm -rf / (unlikely but fatal)
-		if strings.Contains(line, "rm -rf /") {
-			issues = append(issues, fmt.Sprintf("[%s] %s: CRITICAL 'rm -rf /' found on line %d", user, path, i+1))
-		}
-	}
-	return issues
-}
-
-func (m *UniversalAuditManager) AnalyzeFileChanges(paths []string, since time.Duration) ([]ports.AuditEvent, error) {
-	var events []ports.AuditEvent
-	ctx := context.Background()
-	minutes := int(since.Minutes())
-	if minutes < 1 {
-		minutes = 1
-	}
-
-	for _, path := range paths {
-		// find path -type f -mmin -minutes
-		res, err := m.executor.Exec(ctx, "find", path, "-type", "f", "-mmin", fmt.Sprintf("-%d", minutes))
-		if err != nil {
-			continue
-		}
-
-		lines := strings.Split(res.Stdout, "\n")
-		for _, line := range lines {
-			if line == "" {
+	// Try JSON output first
+	// journalctl -u service --since "X" --output=json --no-pager
+	res, err := m.executor.Exec(ctx, "journalctl", "-u", service, "--since", sinceStr, "--output=json", "--no-pager")
+	if err == nil {
+		var events []ports.AuditEvent
+		// Parse JSON stream (one JSON object per line)
+		scanner := bufio.NewScanner(strings.NewReader(res.Stdout))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.TrimSpace(line) == "" {
 				continue
 			}
+
+			var entry JournalEntry
+			if err := json.Unmarshal([]byte(line), &entry); err != nil {
+				continue
+			}
+
+			// Convert to AuditEvent
+			tsVal, _ := strconv.ParseInt(entry.Realtime, 10, 64)
+			ts := time.Unix(0, tsVal*1000) // Microseconds to Nanoseconds
+
+			severity := "INFO"
+			prio, _ := strconv.Atoi(entry.Priority)
+			if prio <= 3 { // 0=Emerg, 1=Alert, 2=Crit, 3=Err
+				severity = "CRITICAL"
+			} else if prio == 4 { // Warning
+				severity = "WARNING"
+			}
+
 			events = append(events, ports.AuditEvent{
-				Type:      "FILE_MODIFICATION",
-				User:      "unknown",
-				Message:   fmt.Sprintf("File modified: %s", line),
-				Severity:  "WARNING",
-				Timestamp: time.Now(), // Placeholder, ideally stat the file
+				Type:      entry.SyslogIdentifier,
+				User:      entry.UID, // Use UID if available
+				Timestamp: ts,
+				Message:   entry.Message,
+				Severity:  severity,
 			})
 		}
+		return events, nil
 	}
-	return events, nil
+	
+	return nil, fmt.Errorf("journalctl failed or not available")
+}
+
+// analyzeLogFile reads log file and parses it
+func (m *UniversalAuditManager) analyzeLogFile(path string, logType string, since time.Duration) ([]ports.AuditEvent, error) {
+	ctx := context.Background()
+	// tail -n 500 path
+	res, err := m.executor.Exec(ctx, "tail", "-n", "500", path)
+	if err != nil {
+		return nil, err
+	}
+	
+	return m.parseLogs(res.Stdout, logType, since), nil
 }

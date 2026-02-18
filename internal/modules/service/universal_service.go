@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"strconv"
+	"regexp"
 	"strings"
 
 	"github.com/mascli/troncli/internal/core/adapter"
@@ -42,33 +43,88 @@ func (m *UniversalServiceManager) ListServices() ([]ports.ServiceUnit, error) {
 	}
 }
 
+type systemdUnit struct {
+	Unit        string `json:"unit"`
+	Load        string `json:"load"`
+	Active      string `json:"active"`
+	Sub         string `json:"sub"`
+	Description string `json:"description"`
+}
+
 func (m *UniversalServiceManager) listSystemdServices(ctx context.Context) ([]ports.ServiceUnit, error) {
-	// systemctl list-units --type=service --all --no-pager --no-legend
-	res, err := m.executor.Exec(ctx, "systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend")
+	// Try JSON output first (systemd v218+)
+	res, err := m.executor.Exec(ctx, "systemctl", "list-units", "--type=service", "--all", "--output=json")
+	if err == nil {
+		var units []systemdUnit
+		if jsonErr := json.Unmarshal([]byte(res.Stdout), &units); jsonErr == nil {
+			var services []ports.ServiceUnit
+			for _, u := range units {
+				services = append(services, ports.ServiceUnit{
+					Name:        u.Unit,
+					LoadState:   u.Load,
+					ActiveState: u.Active,
+					SubState:    u.Sub,
+					Status:      u.Active,
+					Description: u.Description,
+					Enabled:     u.Load == "loaded",
+				})
+			}
+			return services, nil
+		}
+	}
+
+	// Fallback to text parsing if JSON fails or not supported
+	res, err = m.executor.Exec(ctx, "systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend")
 	if err != nil {
 		return nil, err
 	}
 
+		// Group 1: Unit
+	// Group 2: Load
+	// Group 3: Active
+	// Group 4: Sub
+	// Group 5: Description (optional)
+	// Example: cron.service loaded active running Regular background program processing daemon
+	// Regex breakdown:
+	// ^(\S+)      -> Unit name (non-whitespace)
+	// \s+         -> Separator
+	// (\S+)       -> Load state
+	// \s+         -> Separator
+	// (\S+)       -> Active state
+	// \s+         -> Separator
+	// (\S+)       -> Sub state
+	// \s*         -> Optional separator
+	// (.*)$       -> Description (rest of line)
+	reService := regexp.MustCompile(`^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*(.*)$`)
+
 	var services []ports.ServiceUnit
 	lines := strings.Split(res.Stdout, "\n")
 	for _, line := range lines {
-		parts := strings.Fields(line)
-		if len(parts) >= 4 {
-			// unit load active sub description...
-			name := parts[0]
-			load := parts[1]
-			active := parts[2]
-			sub := parts[3]
-			desc := strings.Join(parts[4:], " ")
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		
+		matches := reService.FindStringSubmatch(line)
+		if len(matches) >= 5 {
+			// Skip header lines if they match accidentally
+			if matches[1] == "UNIT" {
+				continue
+			}
+
+			name := matches[1]
+			load := matches[2]
+			active := matches[3]
+			sub := matches[4]
+			desc := matches[5]
 
 			services = append(services, ports.ServiceUnit{
 				Name:        name,
 				LoadState:   load,
 				ActiveState: active,
 				SubState:    sub,
-				Status:      active, // active/inactive
+				Status:      active,
 				Description: desc,
-				Enabled:     load == "loaded", // simplification
+				Enabled:     load == "loaded",
 			})
 		}
 	}
@@ -77,29 +133,40 @@ func (m *UniversalServiceManager) listSystemdServices(ctx context.Context) ([]po
 
 func (m *UniversalServiceManager) listSysvServices(ctx context.Context) ([]ports.ServiceUnit, error) {
 	// service --status-all
+	// Output format:
+	// [ + ]  nginx
+	// [ - ]  apache2
+	// [ ? ]  unknown
 	res, err := m.executor.Exec(ctx, "service", "--status-all")
 	if err != nil {
 		return nil, err
 	}
 
+	// Regex for sysvinit status
+	// Group 1: Status (+, -, ?)
+	// Group 2: Name
+	reSysv := regexp.MustCompile(`\[\s*([+\-?])\s*\]\s+(\S+)`)
+
 	var services []ports.ServiceUnit
 	lines := strings.Split(res.Stdout, "\n")
 	for _, line := range lines {
-		// [ + ]  nginx
-		// [ - ]  apache2
-		parts := strings.Fields(line)
-		if len(parts) >= 4 {
-			status := parts[1]
-			name := parts[3]
+		matches := reSysv.FindStringSubmatch(line)
+		if len(matches) >= 3 {
+			statusSymbol := matches[1]
+			name := matches[2]
 
 			state := "inactive"
-			if status == "+" {
+			if statusSymbol == "+" {
 				state = "active"
+			} else if statusSymbol == "?" {
+				state = "unknown"
 			}
 
 			services = append(services, ports.ServiceUnit{
-				Name:   name,
-				Status: state,
+				Name:        name,
+				Status:      state,
+				ActiveState: state,
+				LoadState:   "loaded", // Assumed loaded if listed
 			})
 		}
 	}
@@ -176,7 +243,7 @@ func (m *UniversalServiceManager) RestartService(name string) error {
 	return fmt.Errorf("unsupported init system")
 }
 
-// EnableService enables a service
+// EnableService enables a service to start on boot
 func (m *UniversalServiceManager) EnableService(name string) error {
 	ctx := context.Background()
 	switch m.profile.InitSystem {
@@ -184,67 +251,55 @@ func (m *UniversalServiceManager) EnableService(name string) error {
 		_, err := m.executor.Exec(ctx, "systemctl", "enable", name)
 		return err
 	case "sysvinit":
-		// update-rc.d name defaults (Debian) or chkconfig name on (RHEL)
-		// Detecting distro for sysvinit enabling is complex
-		return fmt.Errorf("enable not fully implemented for sysvinit")
+		_, err := m.executor.Exec(ctx, "update-rc.d", name, "enable")
+		return err
 	case "openrc":
 		_, err := m.executor.Exec(ctx, "rc-update", "add", name, "default")
 		return err
 	}
-	return fmt.Errorf("unsupported init system")
+	return fmt.Errorf("unsupported init system for enable: %s", m.profile.InitSystem)
 }
 
-// DisableService disables a service
+// DisableService disables a service from starting on boot
 func (m *UniversalServiceManager) DisableService(name string) error {
 	ctx := context.Background()
 	switch m.profile.InitSystem {
 	case "systemd":
 		_, err := m.executor.Exec(ctx, "systemctl", "disable", name)
 		return err
+	case "sysvinit":
+		_, err := m.executor.Exec(ctx, "update-rc.d", name, "disable")
+		return err
 	case "openrc":
 		_, err := m.executor.Exec(ctx, "rc-update", "del", name, "default")
 		return err
 	}
-	return fmt.Errorf("unsupported init system")
+	return fmt.Errorf("unsupported init system for disable: %s", m.profile.InitSystem)
 }
 
-// GetServiceStatus returns the status output
+// GetServiceStatus returns the status output of a service
 func (m *UniversalServiceManager) GetServiceStatus(name string) (string, error) {
 	ctx := context.Background()
-	var args []string
-	cmd := ""
-
 	switch m.profile.InitSystem {
 	case "systemd":
-		cmd = "systemctl"
-		args = []string{"status", name}
+		res, err := m.executor.Exec(ctx, "systemctl", "status", name)
+		return res.Stdout, err
 	case "sysvinit":
-		cmd = "service"
-		args = []string{name, "status"}
+		res, err := m.executor.Exec(ctx, "service", name, "status")
+		return res.Stdout, err
 	case "openrc":
-		cmd = "rc-service"
-		args = []string{name, "status"}
-	default:
-		return "", fmt.Errorf("unsupported init system")
+		res, err := m.executor.Exec(ctx, "rc-service", name, "status")
+		return res.Stdout, err
 	}
-
-	res, err := m.executor.Exec(ctx, cmd, args...)
-	// status command often returns non-zero if service is stopped, but we want the output
-	if res != nil {
-		return res.Stdout + "\n" + res.Stderr, nil
-	}
-	return "", err
+	return "", fmt.Errorf("unsupported init system")
 }
 
-// GetServiceLogs returns the logs for a service
+// GetServiceLogs returns the logs for a service (journald or log file)
 func (m *UniversalServiceManager) GetServiceLogs(name string, lines int) (string, error) {
 	ctx := context.Background()
 	if m.profile.InitSystem == "systemd" {
-		res, err := m.executor.Exec(ctx, "journalctl", "-u", name, "-n", strconv.Itoa(lines), "--no-pager")
-		if err != nil {
-			return "", err
-		}
-		return res.Stdout, nil
+		res, err := m.executor.Exec(ctx, "journalctl", "-u", name, "-n", fmt.Sprintf("%d", lines), "--no-pager")
+		return res.Stdout, err
 	}
-	return "", fmt.Errorf("logs only supported for systemd currently")
+	return "", fmt.Errorf("log retrieval only supported for systemd")
 }
