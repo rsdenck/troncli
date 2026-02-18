@@ -1,5 +1,7 @@
 package audit
 
+// Package audit provides audit and logging capabilities.
+
 import (
 	"bufio"
 	"context"
@@ -80,7 +82,7 @@ func (m *UniversalAuditManager) AnalyzeLogins(since time.Duration) ([]ports.Audi
 		if line == "" || strings.HasPrefix(line, "wtmp begins") {
 			continue
 		}
-		
+
 		matches := reLast.FindStringSubmatch(line)
 		if len(matches) >= 5 {
 			user := matches[1]
@@ -120,7 +122,7 @@ func (m *UniversalAuditManager) parseLogs(output string, logType string, since t
 
 	// Regex for SSH failures
 	reSSHFail := regexp.MustCompile(`Failed password for (?:invalid user )?(\S+) from (\S+)`)
-	
+
 	// Regex for Sudo
 	reSudo := regexp.MustCompile(`sudo:\s+(\S+)\s*:.*COMMAND=(.*)`)
 
@@ -140,10 +142,10 @@ func (m *UniversalAuditManager) parseLogs(output string, logType string, since t
 		if err != nil {
 			continue
 		}
-		
+
 		// Add year (syslog usually doesn't have year)
 		timestamp = timestamp.AddDate(currentYear, 0, 0)
-		
+
 		// Handle year wraparound (e.g. reading Dec logs in Jan)
 		if timestamp.After(time.Now().Add(24 * time.Hour)) {
 			timestamp = timestamp.AddDate(-1, 0, 0)
@@ -265,7 +267,7 @@ func (m *UniversalAuditManager) analyzeJournal(service string, since time.Durati
 		}
 		return events, nil
 	}
-	
+
 	return nil, fmt.Errorf("journalctl failed or not available")
 }
 
@@ -277,6 +279,6 @@ func (m *UniversalAuditManager) analyzeLogFile(path string, logType string, sinc
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return m.parseLogs(res.Stdout, logType, since), nil
 }

@@ -1,5 +1,7 @@
 package network
 
+// Package network provides network management capabilities.
+
 import (
 	"bufio"
 	"context"

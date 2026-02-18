@@ -1,5 +1,7 @@
 package lvm
 
+// Package lvm provides Logical Volume Manager capabilities.
+
 import (
 	"bytes"
 	"encoding/json"

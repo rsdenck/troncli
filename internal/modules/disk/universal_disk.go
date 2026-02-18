@@ -1,5 +1,7 @@
 package disk
 
+// Package disk provides disk management capabilities.
+
 import (
 	"context"
 	"encoding/json"

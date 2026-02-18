@@ -1,5 +1,7 @@
 package plugin
 
+// Package plugin provides plugin management capabilities.
+
 import (
 	"context"
 	"crypto/sha256"
@@ -239,12 +241,12 @@ func (m *UniversalPluginManager) ExecutePlugin(ctx context.Context, name string,
 
 	// Limit Output (10MB max)
 	const MaxOutputSize = 10 * 1024 * 1024
-	
+
 	// Create pipes for stdout/stderr to control them
 	// Using LimitWriter wrapper for os.Stdout/Stderr is tricky because it writes directly.
 	// We want to capture or pass through but limit.
 	// Since we are CLI, we usually want to stream to user.
-	
+
 	cmd.Stdout = &limitWriter{w: os.Stdout, limit: MaxOutputSize}
 	cmd.Stderr = &limitWriter{w: os.Stderr, limit: MaxOutputSize}
 

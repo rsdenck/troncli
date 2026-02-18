@@ -2,6 +2,8 @@
 
 package scheduler
 
+// Package scheduler provides task scheduling capabilities.
+
 import (
 	"encoding/json"
 	"fmt"

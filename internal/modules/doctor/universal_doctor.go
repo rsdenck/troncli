@@ -1,5 +1,7 @@
 package doctor
 
+// Package doctor provides system diagnostic capabilities.
+
 import (
 	"context"
 	"fmt"

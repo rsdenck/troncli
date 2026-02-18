@@ -1,5 +1,7 @@
 package service
 
+// Package service provides service management capabilities.
+
 import (
 	"context"
 	"encoding/json"
@@ -79,7 +81,7 @@ func (m *UniversalServiceManager) listSystemdServices(ctx context.Context) ([]po
 		return nil, err
 	}
 
-		// Group 1: Unit
+	// Group 1: Unit
 	// Group 2: Load
 	// Group 3: Active
 	// Group 4: Sub
@@ -103,7 +105,7 @@ func (m *UniversalServiceManager) listSystemdServices(ctx context.Context) ([]po
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-		
+
 		matches := reService.FindStringSubmatch(line)
 		if len(matches) >= 5 {
 			// Skip header lines if they match accidentally

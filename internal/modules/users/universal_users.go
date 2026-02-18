@@ -1,5 +1,7 @@
 package users
 
+// Package users provides user management capabilities.
+
 import (
 	"bufio"
 	"context"

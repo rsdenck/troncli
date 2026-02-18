@@ -1,5 +1,7 @@
 package adapter
 
+// Package adapter defines interfaces for external system adapters.
+
 import (
 	"bytes"
 	"context"

@@ -1,5 +1,7 @@
 package remote
 
+// Package remote provides remote execution capabilities.
+
 import (
 	"bufio"
 	"context"

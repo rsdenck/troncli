@@ -1,5 +1,7 @@
 package container
 
+// Package container provides container management capabilities.
+
 import (
 	"context"
 	"encoding/json"

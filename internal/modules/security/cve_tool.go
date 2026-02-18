@@ -1,5 +1,7 @@
 package security
 
+// Package security provides security scanning capabilities.
+
 import (
 	"encoding/json"
 	"fmt"

@@ -1,5 +1,7 @@
 package ssh
 
+// Package ssh provides SSH key management capabilities.
+
 import (
 	"bytes"
 	"encoding/json"

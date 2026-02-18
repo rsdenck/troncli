@@ -1,5 +1,7 @@
 package process
 
+// Package process provides process management capabilities.
+
 import (
 	"context"
 	"fmt"
