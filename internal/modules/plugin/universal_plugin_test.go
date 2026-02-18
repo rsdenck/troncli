@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -29,7 +28,7 @@ func (m *MockExecutor) ExecWithInput(ctx context.Context, input string, command 
 
 func TestInstallPlugin_Success(t *testing.T) {
 	// 1. Create a temp directory for plugins
-	tmpDir, err := ioutil.TempDir("", "troncli-test-")
+	tmpDir, err := os.MkdirTemp("", "troncli-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,14 +48,14 @@ func TestInstallPlugin_Success(t *testing.T) {
 	// 4. Setup Manager with custom registry and temp dir
 	mockExec := &MockExecutor{}
 	profile := &domain.SystemProfile{}
-	
-	// We need to inject the temp dir. 
+
+	// We need to inject the temp dir.
 	// Since NewUniversalPluginManager uses hardcoded paths relative to UserHomeDir,
-	// we need to either change NewUniversalPluginManager to accept a path, 
+	// we need to either change NewUniversalPluginManager to accept a path,
 	// or mock UserHomeDir (hard in Go), or modify the struct directly if possible.
 	// Since I can't modify the struct fields (they are private/unexported in the package, wait, I'm in package plugin),
 	// I can modify them if I'm in `package plugin`.
-	
+
 	manager, err := NewUniversalPluginManager(mockExec, profile)
 	if err != nil {
 		// NewUniversalPluginManager might fail if it can't create dirs in real HOME.
@@ -67,7 +66,7 @@ func TestInstallPlugin_Success(t *testing.T) {
 	}
 	// Overwrite pluginDir
 	manager.pluginDir = tmpDir
-	
+
 	// Overwrite registry
 	manager.registry = map[string]PluginDef{
 		"test-plugin": {
@@ -75,7 +74,7 @@ func TestInstallPlugin_Success(t *testing.T) {
 			Checksum: checksum,
 		},
 	}
-	
+
 	// Inject HTTP Client that trusts the test server certificate
 	manager.SetHTTPClient(ts.Client())
 
@@ -103,7 +102,7 @@ func TestInstallPlugin_Success(t *testing.T) {
 	}
 
 	// Check content
-	savedContent, _ := ioutil.ReadFile(destPath)
+	savedContent, _ := os.ReadFile(destPath)
 	if string(savedContent) != string(pluginContent) {
 		t.Errorf("Content mismatch")
 	}
@@ -111,7 +110,7 @@ func TestInstallPlugin_Success(t *testing.T) {
 
 func TestInstallPlugin_ChecksumMismatch(t *testing.T) {
 	// 1. Temp dir
-	tmpDir, err := ioutil.TempDir("", "troncli-test-")
+	tmpDir, err := os.MkdirTemp("", "troncli-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +146,7 @@ func TestInstallPlugin_ChecksumMismatch(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected InstallPlugin to fail due to checksum mismatch, but it succeeded")
 	}
-	
+
 	// Verify error message contains "checksum mismatch"
 	if err != nil && len(err.Error()) > 0 {
 		// Pass

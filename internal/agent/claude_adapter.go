@@ -51,7 +51,7 @@ type claudeResponse struct {
 
 func (a *ClaudeAdapter) SendPrompt(ctx context.Context, prompt string) (string, error) {
 	if a.APIKey == "" {
-		return "", fmt.Errorf("Claude API key is missing")
+		return "", fmt.Errorf("claude API key is missing")
 	}
 
 	reqBody := claudeRequest{

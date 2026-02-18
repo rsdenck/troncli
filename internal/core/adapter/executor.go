@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -26,7 +25,7 @@ type Executor interface {
 
 // SystemExecutor implements Executor with safe execution patterns
 type SystemExecutor struct {
-	mu sync.Mutex // Optional: use for concurrency limiting if needed globally
+	// mu sync.Mutex // Optional: use for concurrency limiting if needed globally
 }
 
 // NewExecutor creates a new executor

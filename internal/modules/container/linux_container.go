@@ -26,13 +26,6 @@ func NewLinuxContainerManager() *LinuxContainerManager {
 	return &LinuxContainerManager{runtimes: runtimes}
 }
 
-type containerJSON struct {
-	ID    string   `json:"ID"`
-	Names []string `json:"Names"`
-	Image string   `json:"Image"`
-	State string   `json:"State"`
-}
-
 // ListContainers returns a list of containers from all available runtimes
 func (m *LinuxContainerManager) ListContainers(all bool) ([]ports.Container, error) {
 	var result []ports.Container
