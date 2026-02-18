@@ -1,5 +1,7 @@
 package bash
 
+// Package bash provides bash command execution.
+
 import (
 	"context"
 	"fmt"
@@ -48,7 +50,7 @@ func (m *UniversalBashManager) RunScript(path string) (string, error) {
 		return "", fmt.Errorf("failed to resolve path: %w", err)
 	}
 
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+	if _, errStat := os.Stat(absPath); os.IsNotExist(errStat) {
 		return "", fmt.Errorf("script file not found: %s", absPath)
 	}
 

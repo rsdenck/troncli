@@ -1,5 +1,7 @@
 package logger
 
+// Package logger provides logging functionality.
+
 import (
 	"context"
 	"fmt"
@@ -23,7 +25,8 @@ func Init(opts Options) error {
 	// Ensure log directory exists if log file is specified
 	if opts.LogFile != "" {
 		dir := filepath.Dir(opts.LogFile)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		// G301: Expect directory permissions to be 0750 or less
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			return err
 		}
 	}
@@ -36,9 +39,10 @@ func Init(opts Options) error {
 	//    - All levels including Debug -> File
 
 	consoleHandler := NewConsoleHandler(os.Stdout, os.Stderr, opts)
-	
+
 	if opts.LogFile != "" {
-		f, err := os.OpenFile(opts.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		// G302: Expect file permissions to be 0600 or less
+		f, err := os.OpenFile(opts.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			return err
 		}
@@ -91,7 +95,7 @@ func (h *ConsoleHandler) Handle(ctx context.Context, r slog.Record) error {
 	// Format: [LEVEL] Message key=value
 	// Or just Message for Info
 	msg := r.Message
-	
+
 	// Write to writer
 	_, err := io.WriteString(w, fmt.Sprintf("[%s] %s\n", r.Level, msg))
 	return err

@@ -1,5 +1,7 @@
 package domain
 
+// Package domain defines the core domain models.
+
 // SystemProfile represents the detected system environment
 type SystemProfile struct {
 	Distro         string // Ubuntu, Fedora, Arch, etc.

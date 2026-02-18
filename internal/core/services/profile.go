@@ -1,5 +1,7 @@
 package services
 
+// Package services implements core business logic services.
+
 import (
 	"context"
 	"os"
@@ -37,13 +39,13 @@ func (e *ProfileEngine) DetectProfile() (*domain.SystemProfile, error) {
 	e.detectInitSystem(ctx, profile)
 
 	// 3. Detect Package Manager
-	e.detectPackageManager(ctx, profile)
+	e.detectPackageManager(profile)
 
 	// 4. Detect Firewall
 	e.detectFirewall(ctx, profile)
 
 	// 5. Detect Network Stack
-	e.detectNetworkStack(ctx, profile)
+	e.detectNetworkStack(profile)
 
 	// 6. Detect Environment
 	e.detectEnvironment(ctx, profile)
@@ -92,7 +94,7 @@ func (e *ProfileEngine) detectInitSystem(ctx context.Context, p *domain.SystemPr
 	}
 }
 
-func (e *ProfileEngine) detectPackageManager(ctx context.Context, p *domain.SystemProfile) {
+func (e *ProfileEngine) detectPackageManager(p *domain.SystemProfile) {
 	managers := []string{"apt", "dnf", "yum", "pacman", "zypper", "apk"}
 	for _, mgr := range managers {
 		_, err := exec.LookPath(mgr)
@@ -130,7 +132,7 @@ func (e *ProfileEngine) detectFirewall(ctx context.Context, p *domain.SystemProf
 	}
 }
 
-func (e *ProfileEngine) detectNetworkStack(ctx context.Context, p *domain.SystemProfile) {
+func (e *ProfileEngine) detectNetworkStack(p *domain.SystemProfile) {
 	if _, err := os.Stat("/etc/netplan"); err == nil {
 		p.NetworkStack = "netplan"
 		return

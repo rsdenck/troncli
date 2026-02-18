@@ -1,5 +1,7 @@
 package pkg
 
+// Package pkg provides package management capabilities.
+
 import (
 	"context"
 	"fmt"
@@ -8,6 +10,11 @@ import (
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/domain"
 	"github.com/mascli/troncli/internal/core/ports"
+)
+
+const (
+	pacmanCmd = "pacman"
+	dnfCmd    = "dnf"
 )
 
 // UniversalPackageManager implements ports.PackageManager
@@ -41,9 +48,9 @@ func (m *UniversalPackageManager) Install(packageName string) error {
 	switch cmd {
 	case "apt":
 		args = []string{"install", "-y", packageName}
-	case "dnf", "yum":
+	case dnfCmd, "yum":
 		args = []string{"install", "-y", packageName}
-	case "pacman":
+	case pacmanCmd:
 		args = []string{"-S", "--noconfirm", packageName}
 	case "zypper":
 		args = []string{"install", "-y", packageName}
@@ -66,9 +73,9 @@ func (m *UniversalPackageManager) Remove(packageName string) error {
 	switch cmd {
 	case "apt":
 		args = []string{"remove", "-y", packageName}
-	case "dnf", "yum":
+	case dnfCmd, "yum":
 		args = []string{"remove", "-y", packageName}
-	case "pacman":
+	case pacmanCmd:
 		args = []string{"-Rs", "--noconfirm", packageName}
 	case "zypper":
 		args = []string{"remove", "-y", packageName}
@@ -91,9 +98,9 @@ func (m *UniversalPackageManager) Update() error {
 	switch cmd {
 	case "apt":
 		args = []string{"update"}
-	case "dnf", "yum":
+	case dnfCmd, "yum":
 		args = []string{"check-update"}
-	case "pacman":
+	case pacmanCmd:
 		args = []string{"-Sy"}
 	case "zypper":
 		args = []string{"refresh"}
@@ -181,7 +188,7 @@ func (m *UniversalPackageManager) parseSearch(output string) []ports.PackageInfo
 func (m *UniversalPackageManager) parseDnfSearch(output string) []ports.PackageInfo {
 	var pkgs []ports.PackageInfo
 	lines := strings.Split(output, "\n")
-	
+
 	for _, line := range lines {
 		// DNF format: package.arch   version   repo
 		// Skip headers or metadata
@@ -193,7 +200,7 @@ func (m *UniversalPackageManager) parseDnfSearch(output string) []ports.PackageI
 			nameParts := strings.Split(parts[0], ".")
 			name := nameParts[0]
 			version := parts[1]
-			
+
 			pkgs = append(pkgs, ports.PackageInfo{
 				Name:    name,
 				Version: version,
@@ -207,24 +214,24 @@ func (m *UniversalPackageManager) parseDnfSearch(output string) []ports.PackageI
 func (m *UniversalPackageManager) parseZypperSearch(output string) []ports.PackageInfo {
 	var pkgs []ports.PackageInfo
 	lines := strings.Split(output, "\n")
-	
+
 	// S | Name | Summary | Type
 	// --+------+---------+-------
 	// i | pkg  | desc    | package
-	
+
 	for _, line := range lines {
 		if strings.HasPrefix(line, "S |") || strings.HasPrefix(line, "--") {
 			continue
 		}
-		
+
 		parts := strings.Split(line, "|")
 		if len(parts) >= 4 {
 			status := strings.TrimSpace(parts[0])
 			name := strings.TrimSpace(parts[1])
 			desc := strings.TrimSpace(parts[2])
-			
+
 			installed := (status == "i" || status == "i+")
-			
+
 			pkgs = append(pkgs, ports.PackageInfo{
 				Name:        name,
 				Description: desc,
