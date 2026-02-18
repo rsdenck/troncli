@@ -8,7 +8,7 @@ REPO="rsdenck/troncli"
 
 # Hardcoded version to avoid GitHub API rate limits or failures
 # This should be updated manually or via CI on new releases
-LATEST_RELEASE="v0.2.10"
+LATEST_RELEASE="v0.2.11"
 
 # Detect OS
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')

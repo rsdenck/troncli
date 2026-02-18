@@ -70,3 +70,29 @@ jobs:
             echo "❌ Release ${{ github.ref_name }} NOT found!"
             exit 1
           fi
+
+      - name: Update setup-tron.sh
+        if: success()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Checkout main branch
+          git fetch origin main
+          git checkout main
+          
+          # Update version in script
+          VERSION=${{ github.ref_name }}
+          sed -i "s/LATEST_RELEASE=\"v[0-9]*\.[0-9]*\.[0-9]*\"/LATEST_RELEASE=\"$VERSION\"/" setup-tron.sh
+          
+          # Commit and push if changed
+          if git diff --quiet setup-tron.sh; then
+            echo "No changes to setup-tron.sh"
+          else
+            git add setup-tron.sh
+            git commit -m "chore: update setup-tron.sh to $VERSION [skip ci]"
+            git push origin main
+            echo "✅ setup-tron.sh updated to $VERSION on main branch"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
