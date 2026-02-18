@@ -11,8 +11,8 @@ LATEST_RELEASE=$(curl -sS https://api.github.com/repos/$REPO/releases/latest | g
 
 # Fallback if no release found (e.g., first run)
 if [ -z "$LATEST_RELEASE" ]; then
-  echo "No release found, trying v0.1.1..."
-  LATEST_RELEASE="v0.1.1"
+  echo "No release found via API, trying fallback v0.2.0..."
+  LATEST_RELEASE="v0.2.0"
 fi
 
 # Detect OS
@@ -46,10 +46,11 @@ echo "Downloading from $URL..."
 TMP_DIR=$(mktemp -d)
 trap "rm -rf $TMP_DIR" EXIT
 
-if curl -sSL -o "$TMP_DIR/$FILENAME" "$URL"; then
+if curl -sSLf -o "$TMP_DIR/$FILENAME" "$URL"; then
     echo "Download complete."
 else
-    echo "Error: Failed to download release."
+    echo "Error: Failed to download release from $URL"
+    echo "Please check if the release exists or try manually downloading."
     exit 1
 fi
 
