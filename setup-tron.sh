@@ -6,14 +6,9 @@ set -e
 
 REPO="rsdenck/troncli"
 
-# Fetch the latest release tag
-LATEST_RELEASE=$(curl -sS https://api.github.com/repos/$REPO/releases/latest | grep "tag_name" | cut -d '"' -f 4)
-
-# Fallback if no release found (e.g., first run)
-if [ -z "$LATEST_RELEASE" ]; then
-  echo "No release found via API, trying fallback v0.2.0..."
-  LATEST_RELEASE="v0.2.0"
-fi
+# Hardcoded version to avoid GitHub API rate limits or failures
+# This should be updated manually or via CI on new releases
+LATEST_RELEASE="v0.2.1"
 
 # Detect OS
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')

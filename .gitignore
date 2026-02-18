@@ -28,7 +28,7 @@ Thumbs.db
 coverage*
 
 # Temporary binaries
-audit
-process
-scheduler
-service
+# audit (removed to avoid ignoring module dir)
+# process (removed to avoid ignoring module dir)
+# scheduler (removed to avoid ignoring module dir)
+# service (removed to avoid ignoring module dir)
