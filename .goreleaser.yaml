@@ -2,7 +2,8 @@ version: 2
 project_name: troncli
 
 builds:
-  - env:
+  - main: ./cmd/troncli
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
@@ -19,7 +20,8 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - format: tar.gz
+  - formats: 
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
@@ -30,7 +32,7 @@ checksum:
   algorithm: sha256
 
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 
 changelog:
   sort: asc
