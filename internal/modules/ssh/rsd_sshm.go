@@ -29,7 +29,12 @@ type sshProfile struct {
 func NewRSDSSHMClient() (ports.SSHClient, error) {
 	path, err := exec.LookPath("rsd-sshm")
 	if err != nil {
-		return nil, fmt.Errorf("rsd-sshm binary not found in PATH: %w", err)
+		// Return client with empty path to allow app startup
+		// Methods will check for empty path and return error
+		return &RSDSSHMClient{
+			binaryPath: "",
+			tunnels:    make(map[string]*exec.Cmd),
+		}, nil
 	}
 	return &RSDSSHMClient{
 		binaryPath: path,
@@ -39,6 +44,9 @@ func NewRSDSSHMClient() (ports.SSHClient, error) {
 
 // ListProfiles returns a list of available SSH profiles
 func (c *RSDSSHMClient) ListProfiles() ([]string, error) {
+	if c.binaryPath == "" {
+		return nil, fmt.Errorf("rsd-sshm binary not found. Please install it to use SSH features")
+	}
 	// Execute real command to get profiles in JSON format
 	cmd := exec.Command(c.binaryPath, "--list", "--json")
 	var out bytes.Buffer
@@ -65,6 +73,9 @@ func (c *RSDSSHMClient) ListProfiles() ([]string, error) {
 
 // Connect establishes a connection to a profile (interactive)
 func (c *RSDSSHMClient) Connect(profile string) error {
+	if c.binaryPath == "" {
+		return fmt.Errorf("rsd-sshm binary not found")
+	}
 	cmd := exec.Command(c.binaryPath, "connect", profile)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -75,6 +86,9 @@ func (c *RSDSSHMClient) Connect(profile string) error {
 
 // Execute runs a command on the remote host and returns the output
 func (c *RSDSSHMClient) Execute(profile string, command string) (string, error) {
+	if c.binaryPath == "" {
+		return "", fmt.Errorf("rsd-sshm binary not found")
+	}
 	cmd := exec.Command(c.binaryPath, "exec", profile, "--", command)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -137,6 +151,9 @@ func (c *RSDSSHMClient) CloseTunnel(profile string, localPort string) error {
 
 // CopyFile copies a file to the remote host
 func (c *RSDSSHMClient) CopyFile(profile string, src string, dest string) error {
+	if c.binaryPath == "" {
+		return fmt.Errorf("rsd-sshm binary not found")
+	}
 	cmd := exec.Command(c.binaryPath, "scp", src, fmt.Sprintf("%s:%s", profile, dest))
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
