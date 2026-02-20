@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential dpkg-dev rpm
+          sudo snap install snapcraft --classic
+
+      - name: Run Tests
+        run: go test -v ./...
+
+      - name: Build Binary
+        run: |
+          go build -ldflags="-s -w" -o troncli cmd/troncli/main.go
+          tar czf troncli-linux-amd64.tar.gz troncli LICENSE README.md
+
+      - name: Build DEB Package
+        run: |
+          chmod +x scripts/build-deb.sh
+          ./scripts/build-deb.sh
+
+      - name: Build RPM Package
+        run: |
+          chmod +x scripts/build-rpm.sh
+          ./scripts/build-rpm.sh
+
+      - name: Generate Checksums
+        run: |
+          sha256sum troncli-linux-amd64.tar.gz > checksums.txt
+          sha256sum dist/deb/*.deb >> checksums.txt
+          sha256sum dist/rpm/RPMS/x86_64/*.rpm >> checksums.txt
+          cat checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            troncli-linux-amd64.tar.gz
+            dist/deb/*.deb
+            dist/rpm/RPMS/x86_64/*.rpm
+            checksums.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true

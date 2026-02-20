@@ -1,0 +1,12 @@
+allowed_intents:
+- install_package
+- remove_package
+- open_firewall
+- audit_security
+- network_config
+
+blocked_intents:
+- delete_root
+- format_disk
+
+risk_level: "low"
