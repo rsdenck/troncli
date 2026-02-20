@@ -1,0 +1,359 @@
+# PROMPT DE IMPLEMENTAÇÃO – FASE 6: POLIMENTO E DISTRIBUIÇÃO
+
+## CONTEXTO
+Você está atuando como Engenheiro(a) de Software Sênior com foco em:
+- Linux
+- Empacotamento multiplataforma
+- DevOps
+- Documentação técnica
+- Automação com Shell Script
+- Arquitetura de Software
+
+O objetivo é implementar COMPLETAMENTE a Fase 6 do roadmap:
+Polimento e Distribuição
+
+As três frentes devem ser desenvolvidas em conjunto dentro do repositório:
+
+1) Documentação (Man Pages + Wiki)
+2) Empacotamento (DEB, RPM, AUR, Snap)
+3) Temas (Cyberpunk e Matrix)
+
+Toda implementação deve seguir:
+
+- Programação Estruturada
+- Programação Procedural
+- Programação Funcional
+- Programação Orientada a Objetos (quando aplicável)
+- Programação Orientada a Eventos (quando houver interação CLI)
+- DevOps (CI/CD e automação)
+- Arquitetura organizada (estrutura clara e modular)
+
+======================================================================
+ETAPA 1 — DOCUMENTAÇÃO PROFISSIONAL
+======================================================================
+
+OBJETIVO:
+Criar documentação de nível de distribuição Linux.
+
+### 1.1 Man Page
+
+Criar diretório:
+
+docs/man/
+
+Criar arquivo:
+
+docs/man/<nome_do_projeto>.1
+
+Requisitos:
+- Formato roff (man)
+- Seções obrigatórias:
+  NAME
+  SYNOPSIS
+  DESCRIPTION
+  OPTIONS
+  CONFIGURATION
+  ENVIRONMENT
+  EXIT STATUS
+  EXAMPLES
+  FILES
+  AUTHOR
+  LICENSE
+
+Implementar Makefile target:
+
+make install-man
+
+Que copie a man page para:
+- /usr/share/man/man1/
+
+Validar com:
+man ./docs/man/<arquivo>.1
+
+---------------------------------------------------------------------
+
+### 1.2 Wiki Estruturada
+
+Criar diretório:
+
+docs/wiki/
+
+Arquivos obrigatórios:
+
+- Home.md
+- Installation.md
+- Configuration.md
+- Usage.md
+- Themes.md
+- Packaging.md
+- Development.md
+
+Requisitos:
+- Markdown limpo
+- Exemplos reais de uso
+- Diagramas ASCII quando necessário
+- Fluxo arquitetural (CLI → Core → Renderer → Output)
+
+Criar script:
+
+scripts/generate-docs.sh
+
+Função:
+- Validar markdown
+- Gerar índice automático
+- Verificar links quebrados
+
+======================================================================
+ETAPA 2 — EMPACOTAMENTO MULTIPLATAFORMA
+======================================================================
+
+Criar estrutura:
+
+packaging/
+ ├── deb/
+ ├── rpm/
+ ├── aur/
+ └── snap/
+
+---------------------------------------------------------------------
+2.1 DEB (Debian/Ubuntu)
+---------------------------------------------------------------------
+
+Criar:
+
+packaging/deb/DEBIAN/control
+packaging/deb/DEBIAN/postinst
+packaging/deb/DEBIAN/prerm
+
+Control deve conter:
+- Package
+- Version
+- Section
+- Priority
+- Architecture
+- Maintainer
+- Description
+- Depends
+
+Criar script:
+
+scripts/build-deb.sh
+
+Deve:
+- Montar estrutura
+- Copiar binário
+- Copiar man page
+- Gerar .deb com dpkg-deb --build
+
+---------------------------------------------------------------------
+2.2 RPM (RHEL / Rocky / Fedora)
+---------------------------------------------------------------------
+
+Criar:
+
+packaging/rpm/<nome>.spec
+
+Spec deve conter:
+- Name
+- Version
+- Release
+- Summary
+- License
+- Source
+- %description
+- %prep
+- %build
+- %install
+- %files
+- %changelog
+
+Criar script:
+
+scripts/build-rpm.sh
+
+Gerar pacote com rpmbuild.
+
+---------------------------------------------------------------------
+2.3 AUR (Arch Linux)
+---------------------------------------------------------------------
+
+Criar:
+
+packaging/aur/PKGBUILD
+
+Compatível com:
+- makepkg
+
+Incluir:
+- pkgname
+- pkgver
+- pkgrel
+- depends
+- source
+- sha256sums
+
+Criar README específico para AUR.
+
+---------------------------------------------------------------------
+2.4 Snap
+---------------------------------------------------------------------
+
+Criar:
+
+snap/snapcraft.yaml
+
+Definir:
+- name
+- version
+- summary
+- description
+- grade
+- confinement
+- apps
+- parts
+
+Criar script:
+
+scripts/build-snap.sh
+
+---------------------------------------------------------------------
+2.5 Integração DevOps
+
+Criar:
+
+.github/workflows/release.yml
+
+Pipeline deve:
+- Rodar testes
+- Gerar artefatos
+- Build DEB
+- Build RPM
+- Validar Snap
+- Gerar checksum SHA256
+- Criar Release automática
+
+======================================================================
+ETAPA 3 — SISTEMA DE TEMAS (CYBERPUNK + MATRIX)
+======================================================================
+
+OBJETIVO:
+Implementar sistema modular de temas com suporte a:
+- ANSI colors
+- truecolor
+- fallback automático
+
+Criar diretório:
+
+themes/
+ ├── base.sh
+ ├── cyberpunk.sh
+ └── matrix.sh
+
+---------------------------------------------------------------------
+3.1 Arquitetura de Temas
+
+base.sh:
+- Definir interface padrão:
+  init_theme()
+  apply_primary()
+  apply_secondary()
+  reset_colors()
+
+Aplicar conceito de:
+- Encapsulamento (POO simulada em Shell)
+- Funções puras quando possível
+- Separação de responsabilidades
+
+---------------------------------------------------------------------
+3.2 Tema Cyberpunk
+
+Paleta:
+- Neon pink
+- Ciano vibrante
+- Roxo escuro
+- Fundo preto
+
+Implementar:
+- Gradientes simulados
+- Destaque para erros
+- Estilo futurista
+
+---------------------------------------------------------------------
+3.3 Tema Matrix
+
+Paleta:
+- Verde #00FF41
+- Verde escuro
+- Fundo preto
+
+Implementar:
+- Efeito "terminal hacker"
+- Possibilidade de animação opcional
+- Delay controlado
+
+---------------------------------------------------------------------
+3.4 Sistema de Seleção
+
+Implementar flag CLI:
+
+--theme <nome>
+
+Exemplo:
+programa --theme cyberpunk
+programa --theme matrix
+
+Adicionar fallback automático:
+- Se terminal não suportar truecolor → usar 256 colors
+- Se não suportar 256 → usar padrão ANSI
+
+======================================================================
+PADRÕES OBRIGATÓRIOS
+======================================================================
+
+✔ Scripts devem usar:
+- set -euo pipefail
+- trap para cleanup
+- funções reutilizáveis
+- logging estruturado
+
+✔ Usar:
+- awk para parsing
+- sed para substituições
+- grep para validação
+- xargs quando necessário
+
+✔ Criar:
+Makefile com targets:
+- build
+- test
+- install
+- uninstall
+- build-deb
+- build-rpm
+- build-snap
+- install-man
+
+✔ Código organizado em camadas:
+CLI → Core → Themes → Output
+
+✔ Compatível com:
+- Bash 4+
+- Zsh
+
+======================================================================
+RESULTADO FINAL ESPERADO
+======================================================================
+
+Ao final da implementação:
+
+1. Projeto totalmente documentado.
+2. Pacotes geráveis para Debian, RHEL e Arch.
+3. Snap funcional.
+4. Sistema de temas profissional.
+5. Pipeline automatizada.
+6. Estrutura limpa e pronta para release 1.0.0.
+
+Execute todas as três frentes simultaneamente,
+mantendo consistência arquitetural,
+padronização de código
+e qualidade de software de nível produção.

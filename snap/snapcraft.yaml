@@ -1,0 +1,35 @@
+name: troncli
+base: core22
+version: '0.2.21'
+summary: Production Grade Linux System Administration CLI
+description: |
+  TronCLI is a comprehensive tool for Linux system administration,
+  offering real-time monitoring, LVM management, security auditing,
+  and network configuration in a unified TUI/CLI interface.
+
+grade: stable
+confinement: strict
+
+apps:
+  troncli:
+    command: bin/troncli
+    plugs:
+      - network
+      - network-bind
+      - network-control
+      - system-observe
+      - hardware-observe
+      - mount-observe
+      - process-control
+      - firewall-control
+
+parts:
+  troncli:
+    plugin: go
+    go-channel: 1.22/stable
+    source: .
+    build-packages:
+      - build-essential
+    stage-packages:
+      - iproute2
+      - nftables
