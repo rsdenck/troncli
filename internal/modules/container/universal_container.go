@@ -110,7 +110,7 @@ func (m *UniversalContainerManager) GetContainerLogs(id string, tail int) (strin
 		}
 		lastErr = err
 	}
-	return "", fmt.Errorf("failed to get logs from any runtime: %v", lastErr)
+	return "", fmt.Errorf("failed to get logs from any runtime: %w", lastErr)
 }
 
 func (m *UniversalContainerManager) PruneSystem() (string, error) {
@@ -143,5 +143,5 @@ func (m *UniversalContainerManager) runOnAnyRuntimeArgs(args ...string) error {
 		}
 		lastErr = err
 	}
-	return fmt.Errorf("operation failed on all runtimes: %v", lastErr)
+	return fmt.Errorf("operation failed on all runtimes: %w", lastErr)
 }
