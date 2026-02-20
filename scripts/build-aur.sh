@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION="0.2.19"
+VERSION="0.2.20"
 AUR_DIR="dist/aur"
 
 echo "Building AUR package for TronCLI v${VERSION}..."

@@ -1,6 +1,6 @@
 # Makefile for TronCLI
 
-VERSION := 0.2.19
+VERSION := 0.2.20
 BINARY_NAME := troncli
 
 .PHONY: all clean build test install uninstall deb rpm aur snap docs
