@@ -14,8 +14,10 @@ import (
 
 // RunNativeDig performs a native DNS lookup
 func RunNativeDig(target string) (string, error) {
+	start := time.Now()
 	// Simple DNS lookup
 	ips, err := net.LookupHost(target)
+	duration := time.Since(start)
 	if err != nil {
 		return "", err
 	}
@@ -56,8 +58,8 @@ func RunNativeDig(target string) (string, error) {
 		}
 	}
 
-	result.WriteString(fmt.Sprintf("\n;; Query time: %d msec\n", 10))         // Fake time
-	result.WriteString(fmt.Sprintf(";; SERVER: %s#53(8.8.8.8)\n", "8.8.8.8")) // Fake server
+	result.WriteString(fmt.Sprintf("\n;; Query time: %d msec\n", duration.Milliseconds()))
+	result.WriteString(";; SERVER: System Resolver\n")
 	result.WriteString(fmt.Sprintf(";; WHEN: %s\n", time.Now().Format(time.RFC1123)))
 	result.WriteString(fmt.Sprintf(";; MSG SIZE  rcvd: %d\n", result.Len()))
 
