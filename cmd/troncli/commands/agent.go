@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/mascli/troncli/internal/agent"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -36,7 +37,36 @@ func init() {
 	agentCmd.AddCommand(agentEnableCmd)
 	agentCmd.AddCommand(agentSetModelCmd)
 	agentCmd.AddCommand(agentAskCmd)
+	agentCmd.AddCommand(agentStatusCmd)
 	rootCmd.AddCommand(agentCmd)
+}
+
+var agentStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Exibir o status e configuração do agente",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		config, err := loadAgentConfig()
+		if err != nil {
+			return fmt.Errorf("erro ao carregar configuração: %w", err)
+		}
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - AGENT STATUS")
+		table.SetHeaders([]string{"PROPERTY", "VALUE"})
+		table.AddRow([]string{"Provider", config.Provider})
+		table.AddRow([]string{"Model", config.Model})
+
+		apiKeyStatus := "Not Set"
+		if len(config.APIKey) > 4 {
+			apiKeyStatus = "********" + config.APIKey[len(config.APIKey)-4:]
+		} else if config.APIKey != "" {
+			apiKeyStatus = "********"
+		}
+		table.AddRow([]string{"API Key", apiKeyStatus})
+
+		table.Render()
+		return nil
+	},
 }
 
 func loadAgentConfig() (*AgentConfig, error) {

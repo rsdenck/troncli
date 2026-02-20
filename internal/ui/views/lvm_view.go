@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mascli/troncli/internal/core/ports"
@@ -37,16 +36,23 @@ func (v *LVMView) setupUI() {
 
 	// PV Table
 	v.pvTable.SetBorders(true).SetTitle(" PHYSICAL VOLUMES ").SetTitleColor(tcell.ColorAqua).SetBorderColor(tcell.ColorAqua)
+	v.pvTable.SetSelectable(true, false)
 
 	// VG Table
 	v.vgTable.SetBorders(true).SetTitle(" VOLUME GROUPS ").SetTitleColor(tcell.ColorAqua).SetBorderColor(tcell.ColorAqua)
+	v.vgTable.SetSelectable(true, false)
 
 	// LV Table
 	v.lvTable.SetBorders(true).SetTitle(" LOGICAL VOLUMES ").SetTitleColor(tcell.ColorAqua).SetBorderColor(tcell.ColorAqua)
+	v.lvTable.SetSelectable(true, false)
 
-	v.AddItem(v.pvTable, 0, 1, false)
-	v.AddItem(v.vgTable, 0, 1, false)
-	v.AddItem(v.lvTable, 0, 2, true)
+	// Layout: Top row (PV + VG), Bottom row (LV)
+	topRow := tview.NewFlex().SetDirection(tview.FlexColumn)
+	topRow.AddItem(v.pvTable, 0, 1, false)
+	topRow.AddItem(v.vgTable, 0, 1, false)
+
+	v.AddItem(topRow, 0, 1, false)
+	v.AddItem(v.lvTable, 0, 1, true)
 }
 
 func (v *LVMView) loadData() {
@@ -98,8 +104,11 @@ func (v *LVMView) loadData() {
 		for i, lv := range lvs {
 			row := i + 1
 			color := tcell.ColorWhite
-			if strings.Contains(lv.Status, "a") { // Active
-				color = tcell.ColorGreen
+			if lv.Status != "" {
+				// Simple status check logic
+				if lv.Status == "available" { // This depends on what 'lvs' command returns, usually complex attributes
+					color = tcell.ColorGreen
+				}
 			}
 			v.lvTable.SetCell(row, 0, tview.NewTableCell(lv.Name).SetTextColor(color))
 			v.lvTable.SetCell(row, 1, tview.NewTableCell(lv.VGName).SetTextColor(color))

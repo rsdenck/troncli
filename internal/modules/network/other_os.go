@@ -93,11 +93,12 @@ func (m *OtherOSNetworkManager) RunTraceRoute(target string) (string, error) {
 }
 
 func (m *OtherOSNetworkManager) RunDig(target string) (string, error) {
-	return "", errors.New("dig not supported on this OS")
+	return RunNativeDig(target)
 }
 
-func (m *OtherOSNetworkManager) RunNmap(target string, options string) (string, error) {
-	return "", errors.New("nmap not supported on this OS")
+func (m *OtherOSNetworkManager) RunNmap(target string, options string) ([]ports.PortScanResult, error) {
+	ports := ParsePortsFromOptions(options)
+	return RunNativePortScan(target, ports)
 }
 
 func (m *OtherOSNetworkManager) RunTcpdump(interfaceName string, filter string, durationSeconds int) (string, error) {

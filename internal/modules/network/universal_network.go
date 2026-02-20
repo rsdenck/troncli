@@ -191,27 +191,12 @@ func (m *UniversalNetworkManager) RunTraceRoute(target string) (string, error) {
 
 // RunDig runs dig on a target
 func (m *UniversalNetworkManager) RunDig(target string) (string, error) {
-	ctx := context.Background()
-	res, err := m.executor.Exec(ctx, "dig", target)
-	if err != nil {
-		return "", err
-	}
-	return res.Stdout, nil
+	return RunNativeDig(target)
 }
 
-// RunNmap runs nmap on a target
-func (m *UniversalNetworkManager) RunNmap(target string, options string) (string, error) {
-	ctx := context.Background()
-	args := []string{}
-	if options != "" {
-		args = append(args, strings.Fields(options)...)
-	}
-	args = append(args, target)
-	res, err := m.executor.Exec(ctx, "nmap", args...)
-	if err != nil {
-		return "", err
-	}
-	return res.Stdout, nil
+func (m *UniversalNetworkManager) RunNmap(target string, options string) ([]ports.PortScanResult, error) {
+	ports := ParsePortsFromOptions(options)
+	return RunNativePortScan(target, ports)
 }
 
 // RunTcpdump runs tcpdump on an interface

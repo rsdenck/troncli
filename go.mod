@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/gdamore/tcell/v2 v2.13.8
+	github.com/kevinburke/ssh_config v1.6.0
 	github.com/rivo/tview v0.42.0
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1

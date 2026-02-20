@@ -3,12 +3,13 @@ package commands
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
+	"strings"
 
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/network"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -34,18 +35,31 @@ var netInfoCmd = &cobra.Command{
 			return
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "NAME\tSTATE\tMTU\tIPs\tMAC")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - INFORMAÇÕES DE REDE")
+		table.SetHeaders([]string{"NAME", "STATE", "MTU", "IPs", "MAC"})
+
 		for _, i := range ifaces {
-			fmt.Fprintf(w, "%s\t%s\t%d\t%v\t%s\n", i.Name, i.State, i.MTU, i.IPAddresses, i.HardwareAddr)
+			ips := fmt.Sprintf("%v", i.IPAddresses)
+			if len(ips) > 50 {
+				ips = ips[:47] + "..."
+			}
+			table.AddRow([]string{i.Name, i.State, fmt.Sprintf("%d", i.MTU), ips, i.HardwareAddr})
 		}
-		w.Flush()
+		table.Render()
 
 		// Hostname and DNS
 		host, _ := m.GetHostname()
 		dns, _ := m.GetDNSConfig()
-		fmt.Printf("\nHostname: %s\n", host)
-		fmt.Printf("DNS: %v\n", dns)
+
+		fmt.Println() // Spacer
+
+		infoTable := console.NewBoxTable(os.Stdout)
+		infoTable.SetTitle("CONFIGURAÇÃO GERAL")
+		infoTable.SetHeaders([]string{"KEY", "VALUE"})
+		infoTable.AddRow([]string{"Hostname", host})
+		infoTable.AddRow([]string{"DNS", fmt.Sprintf("%v", dns)})
+		infoTable.Render()
 	},
 }
 
@@ -88,12 +102,16 @@ var netSocketCmd = &cobra.Command{
 			return
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "PROTO\tSTATE\tLOCAL\tREMOTE")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - SOCKETS ABERTOS")
+		table.SetHeaders([]string{"PROTO", "STATE", "LOCAL", "REMOTE"})
+
 		for _, s := range stats {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.Protocol, s.State, s.Local, s.Remote)
+			table.AddRow([]string{s.Protocol, s.State, s.Local, s.Remote})
 		}
-		w.Flush()
+
+		table.SetFooter(fmt.Sprintf("Total sockets: %d", len(stats)))
+		table.Render()
 	},
 }
 
@@ -112,7 +130,21 @@ var netTraceCmd = &cobra.Command{
 			fmt.Printf("Error: %v\n", err)
 			return
 		}
-		fmt.Println(res)
+
+		lines := strings.Split(res, "\n")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - TRACEROUTE: %s", args[0]))
+		table.SetHeaders([]string{"RAW OUTPUT"})
+
+		count := 0
+		for _, line := range lines {
+			if strings.TrimSpace(line) != "" {
+				table.AddRow([]string{line})
+				count++
+			}
+		}
+		table.SetFooter(fmt.Sprintf("Lines: %d", count))
+		table.Render()
 	},
 }
 
@@ -131,7 +163,18 @@ var netDigCmd = &cobra.Command{
 			fmt.Printf("Error: %v\n", err)
 			return
 		}
-		fmt.Println(res)
+
+		lines := strings.Split(res, "\n")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - DNS LOOKUP: %s", args[0]))
+		table.SetHeaders([]string{"DNS RECORDS"})
+
+		for _, line := range lines {
+			if strings.TrimSpace(line) != "" {
+				table.AddRow([]string{line})
+			}
+		}
+		table.Render()
 	},
 }
 
@@ -142,16 +185,31 @@ var netNmapCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		m, err := getNetworkManager()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Error: %v\n", err)
 			return
 		}
 		opts, _ := cmd.Flags().GetString("opts")
-		res, err := m.RunNmap(args[0], opts)
+		results, err := m.RunNmap(args[0], opts)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
 		}
-		fmt.Println(res)
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - PORT SCAN: %s", args[0]))
+		table.SetHeaders([]string{"PORT", "PROTO", "STATE", "SERVICE"})
+
+		for _, r := range results {
+			table.AddRow([]string{
+				fmt.Sprintf("%d", r.Port),
+				r.Protocol,
+				r.State,
+				r.Service,
+			})
+		}
+
+		table.SetFooter(fmt.Sprintf("Open ports: %d", len(results)))
+		table.Render()
 	},
 }
 
@@ -174,7 +232,24 @@ var netTcpdumpCmd = &cobra.Command{
 			fmt.Printf("Error: %v\n", err)
 			return
 		}
-		fmt.Println(res)
+
+		lines := strings.Split(res, "\n")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - PACKET CAPTURE: %s", args[0]))
+		table.SetHeaders([]string{"PACKETS"})
+
+		count := 0
+		for _, line := range lines {
+			if strings.TrimSpace(line) != "" {
+				if len(line) > 100 {
+					line = line[:97] + "..."
+				}
+				table.AddRow([]string{line})
+				count++
+			}
+		}
+		table.SetFooter(fmt.Sprintf("Packets captured: %d", count))
+		table.Render()
 	},
 }
 

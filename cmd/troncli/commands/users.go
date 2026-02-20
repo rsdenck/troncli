@@ -3,12 +3,12 @@ package commands
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
 
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/users"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -34,12 +34,16 @@ var userListCmd = &cobra.Command{
 			return
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "USERNAME\tUID\tGID\tSHELL\tHOME")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - LISTAGEM DE USUÁRIOS")
+		table.SetHeaders([]string{"USERNAME", "UID", "GID", "SHELL", "HOME"})
+
 		for _, u := range usersList {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", u.Username, u.UID, u.GID, u.Shell, u.HomeDir)
+			table.AddRow([]string{u.Username, u.UID, u.GID, u.Shell, u.HomeDir})
 		}
-		w.Flush()
+
+		table.SetFooter(fmt.Sprintf("Total de usuários: %d", len(usersList)))
+		table.Render()
 	},
 }
 
@@ -131,12 +135,21 @@ var groupListCmd = &cobra.Command{
 			return
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "GROUP\tGID\tMEMBERS")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - LISTAGEM DE GRUPOS")
+		table.SetHeaders([]string{"GROUP", "GID", "MEMBERS"})
+
 		for _, g := range groups {
-			fmt.Fprintf(w, "%s\t%s\t%v\n", g.Groupname, g.GID, g.Members)
+			members := fmt.Sprintf("%v", g.Members)
+			// Truncate members if too long?
+			if len(members) > 50 {
+				members = members[:47] + "..."
+			}
+			table.AddRow([]string{g.Groupname, g.GID, members})
 		}
-		w.Flush()
+
+		table.SetFooter(fmt.Sprintf("Total de grupos: %d", len(groups)))
+		table.Render()
 	},
 }
 

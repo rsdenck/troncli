@@ -1,0 +1,26 @@
+# Maintainer: Ranlens Denck <ranlens.denck@protonmail.com>
+pkgname=troncli
+pkgver=0.2.19
+pkgrel=1
+pkgdesc="Production Grade Linux System Administration CLI"
+arch=('x86_64' 'aarch64')
+url="https://github.com/rsdenck/troncli"
+license=('MIT')
+depends=('glibc' 'iproute2' 'nftables' 'lvm2')
+makedepends=('go')
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/rsdenck/troncli/archive/v${pkgver}.tar.gz")
+sha256sums=('SKIP') # Update with actual checksum in release
+
+build() {
+    cd "$pkgname-$pkgver"
+    export CGO_ENABLED=0
+    go build -ldflags="-s -w" -o troncli cmd/troncli/main.go
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    install -Dm755 troncli "$pkgdir/usr/bin/troncli"
+    install -Dm644 docs/man/troncli.1 "$pkgdir/usr/share/man/man1/troncli.1"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

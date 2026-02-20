@@ -22,6 +22,14 @@ type SocketStat struct {
 	Process  string
 }
 
+// PortScanResult represents a port scan result
+type PortScanResult struct {
+	Port     int
+	Protocol string
+	State    string
+	Service  string
+}
+
 // NetworkConfig represents a network configuration to apply
 type NetworkConfig struct {
 	Interface string
@@ -52,6 +60,6 @@ type NetworkManager interface {
 	GetNftablesRules() ([]string, error)
 	RunTraceRoute(target string) (string, error)
 	RunDig(target string) (string, error)
-	RunNmap(target string, options string) (string, error)
+	RunNmap(target string, options string) ([]PortScanResult, error) // Changed signature
 	RunTcpdump(interfaceName string, filter string, durationSeconds int) (string, error)
 }

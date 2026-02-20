@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/service"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -34,11 +36,21 @@ var serviceListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("%-30s %-10s %-10s %s\n", "UNIT", "LOAD", "ACTIVE", "DESCRIPTION")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - LISTAGEM DE SERVIÇOS")
+		table.SetHeaders([]string{"UNIT", "LOAD", "ACTIVE", "DESCRIPTION"})
+
 		for _, u := range units {
-			// Filter out too many entries if needed, but for now list all
-			fmt.Printf("%-30s %-10s %-10s %s\n", u.Name, u.LoadState, u.ActiveState, u.Description)
+			// Truncate description if too long
+			desc := u.Description
+			if len(desc) > 50 {
+				desc = desc[:47] + "..."
+			}
+			table.AddRow([]string{u.Name, u.LoadState, u.ActiveState, desc})
 		}
+
+		table.SetFooter(fmt.Sprintf("Total services: %d", len(units)))
+		table.Render()
 	},
 }
 
@@ -107,9 +119,22 @@ var serviceStatusCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		status, err := manager.GetServiceStatus(args[0])
-		// Status often returns error code for inactive services, but we might have output
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - STATUS DO SERVIÇO: %s", args[0]))
+		table.SetHeaders([]string{"STATUS OUTPUT"})
+
 		if status != "" {
-			fmt.Println(status)
+			lines := strings.Split(status, "\n")
+			for _, line := range lines {
+				if strings.TrimSpace(line) != "" {
+					if len(line) > 100 {
+						line = line[:97] + "..."
+					}
+					table.AddRow([]string{line})
+				}
+			}
+			table.Render()
 		} else if err != nil {
 			fmt.Printf("Error getting status: %v\n", err)
 		}
@@ -138,7 +163,21 @@ var serviceLogsCmd = &cobra.Command{
 			fmt.Printf("Error getting logs: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(logs)
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - LOGS DO SERVIÇO: %s", args[0]))
+		table.SetHeaders([]string{"LOG ENTRY"})
+
+		logLines := strings.Split(logs, "\n")
+		for _, line := range logLines {
+			if strings.TrimSpace(line) != "" {
+				if len(line) > 100 {
+					line = line[:97] + "..."
+				}
+				table.AddRow([]string{line})
+			}
+		}
+		table.Render()
 	},
 }
 

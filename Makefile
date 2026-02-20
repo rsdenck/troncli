@@ -1,24 +1,40 @@
-.PHONY: build release snapshot clean test
+# Makefile for TronCLI
 
-APP_NAME := troncli
-VERSION := $(shell git describe --tags --always --dirty)
-BUILD_DIR := bin
+VERSION := 0.2.19
+BINARY_NAME := troncli
 
-build:
-	@echo "Building $(APP_NAME) $(VERSION)..."
-	go build -ldflags "-s -w -X main.version=$(VERSION)" -trimpath -o $(BUILD_DIR)/$(APP_NAME) ./cmd/troncli
+.PHONY: all clean build test install uninstall deb rpm aur snap docs
 
-release:
-	@echo "Creating release..."
-	goreleaser release --clean
-
-snapshot:
-	@echo "Creating snapshot release..."
-	goreleaser release --snapshot --clean
+all: build
 
 clean:
-	@echo "Cleaning build directory..."
-	rm -rf $(BUILD_DIR) dist
+	rm -rf dist
+	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_NAME).exe
+
+build:
+	go build -ldflags="-s -w" -o $(BINARY_NAME) cmd/troncli/main.go
 
 test:
-	go test -v ./...
+	go test ./...
+
+install:
+	go install cmd/troncli/main.go
+
+# Packaging Targets (require Linux environment)
+
+deb:
+	./scripts/build-deb.sh
+
+rpm:
+	./scripts/build-rpm.sh
+
+aur:
+	./scripts/build-aur.sh
+
+snap:
+	./scripts/build-snap.sh
+
+# Documentation
+docs:
+	./scripts/generate-docs.sh

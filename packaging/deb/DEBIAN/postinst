@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Link binary
+ln -sf /usr/local/bin/troncli /usr/bin/troncli
+
+# Install man page
+mkdir -p /usr/share/man/man1
+cp /usr/local/share/troncli/man/troncli.1 /usr/share/man/man1/
+gzip -f /usr/share/man/man1/troncli.1
+
+# Update man database
+mandb -q
+
+echo "TronCLI installed successfully."

@@ -5,11 +5,12 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/spf13/cobra"
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/container"
+	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/spf13/cobra"
 )
 
 var containerCmd = &cobra.Command{
@@ -35,7 +36,10 @@ var containerListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		
-		fmt.Printf("%-12s %-20s %-15s %-15s %-10s\n", "ID", "IMAGE", "STATE", "STATUS", "RUNTIME")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - LISTAGEM DE CONTAINERS")
+		table.SetHeaders([]string{"ID", "IMAGE", "STATE", "STATUS", "RUNTIME"})
+		
 		for _, c := range containers {
 			name := ""
 			if len(c.Names) > 0 {
@@ -46,8 +50,11 @@ var containerListCmd = &cobra.Command{
 			if len(id) > 12 {
 				id = id[:12]
 			}
-			fmt.Printf("%-12s %-20s %-15s %-15s %-10s\n", id, name, c.State, c.Status, c.Runtime)
+			table.AddRow([]string{id, name, c.State, c.Status, c.Runtime})
 		}
+		
+		table.SetFooter(fmt.Sprintf("Total containers: %d", len(containers)))
+		table.Render()
 	},
 }
 
@@ -97,7 +104,7 @@ var containerLogsCmd = &cobra.Command{
 			fmt.Printf("Erro: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		tailStr, _ := cmd.Flags().GetString("tail")
 		tail := 20
 		if tailStr != "" {
@@ -106,7 +113,7 @@ var containerLogsCmd = &cobra.Command{
 				tail = t
 			}
 		}
-		
+
 		logs, err := manager.GetContainerLogs(args[0], tail)
 		if err != nil {
 			fmt.Printf("Erro ao obter logs: %v\n", err)
@@ -122,7 +129,7 @@ func init() {
 	containerCmd.AddCommand(containerStartCmd)
 	containerCmd.AddCommand(containerStopCmd)
 	containerCmd.AddCommand(containerLogsCmd)
-	
+
 	containerListCmd.Flags().BoolP("all", "a", false, "Mostrar todos os containers (padrão mostra apenas em execução)")
 	containerLogsCmd.Flags().String("tail", "20", "Número de linhas para mostrar")
 }

@@ -6,10 +6,14 @@ import (
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/audit"
+	"github.com/mascli/troncli/internal/modules/container"
 	"github.com/mascli/troncli/internal/modules/disk"
 	"github.com/mascli/troncli/internal/modules/lvm"
 	"github.com/mascli/troncli/internal/modules/network"
 	"github.com/mascli/troncli/internal/modules/process"
+	"github.com/mascli/troncli/internal/modules/scheduler"
+	"github.com/mascli/troncli/internal/modules/security"
+	"github.com/mascli/troncli/internal/modules/service"
 	"github.com/mascli/troncli/internal/modules/ssh"
 	"github.com/mascli/troncli/internal/modules/users"
 	"github.com/mascli/troncli/internal/ui/components"
@@ -42,7 +46,7 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	sshClient, err := ssh.NewRSDSSHMClient()
+	sshClient, err := ssh.NewNativeSSHClient()
 	if err != nil {
 		return nil, err
 	}
@@ -51,8 +55,12 @@ func NewApp() (*App, error) {
 	systemMonitor := system.NewSystemMonitor()
 	diskManager := disk.NewUniversalDiskManager(executor, profile)
 	networkManager := network.NewUniversalNetworkManager(executor, profile)
-	userManager := users.NewUniversalUserManager(executor, profile)
+	userManager := users.NewLinuxUserManager()
 	processManager := process.NewUniversalProcessManager(executor, profile)
+	containerManager := container.NewDockerManager()
+	serviceManager := service.NewSystemdManager()
+	schedulerManager := scheduler.NewLinuxSchedulerManager()
+	securityManager := security.NewLinuxSecurityManager()
 
 	header := components.NewHeader(tviewApp)
 	statusBar := components.NewStatusBar()
@@ -64,18 +72,25 @@ func NewApp() (*App, error) {
 	sshView := views.NewSSHView(tviewApp, sshClient)
 	lvmView := views.NewLVMView(lvmManager)
 	auditView := views.NewAuditView(auditManager)
-	// New Views (Placeholders until implemented properly)
 	diskView := views.NewDiskView(diskManager)
 	networkView := views.NewNetworkView(networkManager)
 	usersView := views.NewUsersView(userManager)
+	containerView := views.NewContainerView(containerManager)
+	serviceView := views.NewServiceView(serviceManager)
+	schedulerView := views.NewSchedulerView(schedulerManager)
+	securityView := views.NewSecurityView(securityManager)
 
 	content.AddPage("Dashboard", dashboardView, true, true)
 	content.AddPage("SSH Manager", sshView, true, false)
 	content.AddPage("LVM Manager", lvmView, true, false)
 	content.AddPage("Disk & Storage", diskView, true, false)
 	content.AddPage("Network", networkView, true, false)
-	content.AddPage("Users & Groups", usersView, true, false)
+	content.AddPage("Containers", containerView, true, false)
+	content.AddPage("Services", serviceView, true, false)
+	content.AddPage("Cron/Timers", schedulerView, true, false)
+	content.AddPage("Users & Groups", usersView, true, false) // Sidebar key matches?
 	content.AddPage("Audit", auditView, true, false)
+	content.AddPage("Security", securityView, true, false)
 
 	// Callback for sidebar selection
 	sidebar := components.NewSidebar(func(index int, mainText string, secondaryText string, shortcut rune) {

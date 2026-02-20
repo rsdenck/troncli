@@ -3,12 +3,14 @@ package commands
 import (
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/remote"
+	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/spf13/cobra"
 )
 
 var remoteCmd = &cobra.Command{
@@ -49,7 +51,21 @@ var remoteExecCmd = &cobra.Command{
 			fmt.Printf("Erro na execução: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(output)
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - REMOTE EXEC: %s (%s)", args[1], args[0]))
+		table.SetHeaders([]string{"OUTPUT"})
+
+		lines := strings.Split(output, "\n")
+		for _, line := range lines {
+			if strings.TrimSpace(line) != "" {
+				if len(line) > 100 {
+					line = line[:97] + "..."
+				}
+				table.AddRow([]string{line})
+			}
+		}
+		table.Render()
 	},
 }
 
@@ -85,9 +101,16 @@ var remoteListCmd = &cobra.Command{
 			fmt.Printf("Erro ao listar perfis: %v\n", err)
 			os.Exit(1)
 		}
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - PERFIS SSH")
+		table.SetHeaders([]string{"PROFILE"})
+
 		for _, p := range profiles {
-			fmt.Println(p)
+			table.AddRow([]string{p})
 		}
+		table.SetFooter(fmt.Sprintf("Total profiles: %d", len(profiles)))
+		table.Render()
 	},
 }
 

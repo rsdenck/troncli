@@ -3,12 +3,12 @@ package commands
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
 
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/firewall"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -69,12 +69,20 @@ var fwListCmd = &cobra.Command{
 			return
 		}
 
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "ID\tACTION\tPROTO\tPORT\tCOMMENT")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - REGRAS DE FIREWALL")
+		table.SetHeaders([]string{"ID", "ACTION", "PROTO", "PORT", "COMMENT"})
+
 		for _, r := range rules {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", r.ID, r.Action, r.Protocol, r.Port, r.Comment)
+			// Truncate comment if needed
+			comment := r.Comment
+			if len(comment) > 40 {
+				comment = comment[:37] + "..."
+			}
+			table.AddRow([]string{r.ID, r.Action, r.Protocol, r.Port, comment})
 		}
-		w.Flush()
+		table.SetFooter(fmt.Sprintf("Total rules: %d", len(rules)))
+		table.Render()
 	},
 }
 

@@ -13,6 +13,7 @@ type DiskView struct {
 	*tview.Flex
 	manager ports.DiskManager
 	table   *tview.Table
+	details *tview.TextView
 }
 
 func NewDiskView(manager ports.DiskManager) *DiskView {
@@ -20,6 +21,7 @@ func NewDiskView(manager ports.DiskManager) *DiskView {
 		Flex:    tview.NewFlex(),
 		manager: manager,
 		table:   tview.NewTable(),
+		details: tview.NewTextView(),
 	}
 
 	v.setupUI()
@@ -29,12 +31,26 @@ func NewDiskView(manager ports.DiskManager) *DiskView {
 
 func (v *DiskView) setupUI() {
 	v.SetDirection(tview.FlexRow)
-	v.SetBorder(true).SetTitle(" Disk & Storage ").SetBorderColor(themes.TronCyan)
-
-	v.table.SetBorders(true).SetBorderColor(themes.TronBlue)
+	
+	v.table.SetBorders(true).SetTitle(" DISK & STORAGE ").SetBorderColor(themes.TronCyan).SetTitleColor(themes.TronCyan)
 	v.table.SetSelectable(true, false)
 
-	v.AddItem(v.table, 0, 1, true)
+	v.details.SetBorder(true).SetTitle(" PARTITION DETAILS ").SetBorderColor(themes.TronBlue).SetTitleColor(themes.TronBlue)
+	v.details.SetDynamicColors(true)
+
+	v.AddItem(v.table, 0, 3, true)
+	v.AddItem(v.details, 0, 1, false)
+
+	v.table.SetSelectionChangedFunc(func(row, column int) {
+		if row > 0 {
+			cell := v.table.GetCell(row, 0)
+			if cell != nil {
+				// Just showing simple details for now, could be expanded
+				name := cell.Text
+				v.details.SetText(fmt.Sprintf("%sSelected Device: %s%s", themes.ColorNeonCyan, themes.ColorWhite, name))
+			}
+		}
+	})
 }
 
 func (v *DiskView) refreshData() {
@@ -61,6 +77,8 @@ func (v *DiskView) refreshData() {
 		name := prefix + d.Name
 
 		usageStr := "-"
+		usageColor := tcell.ColorWhite
+		
 		if d.MountPoint != "" {
 			usage, err := v.manager.GetFilesystemUsage(d.MountPoint)
 			if err == nil {
@@ -69,6 +87,14 @@ func (v *DiskView) refreshData() {
 					percent = (float64(usage.Used) / float64(usage.Total)) * 100
 				}
 				usageStr = fmt.Sprintf("%.1f%%", percent)
+				
+				if percent > 90 {
+					usageColor = tcell.ColorRed
+				} else if percent > 75 {
+					usageColor = tcell.ColorYellow
+				} else {
+					usageColor = tcell.ColorGreen
+				}
 			}
 		}
 
@@ -76,7 +102,7 @@ func (v *DiskView) refreshData() {
 		v.table.SetCell(row, 1, tview.NewTableCell(d.Size).SetTextColor(tcell.ColorWhite))
 		v.table.SetCell(row, 2, tview.NewTableCell(d.Type).SetTextColor(tcell.ColorWhite))
 		v.table.SetCell(row, 3, tview.NewTableCell(d.MountPoint).SetTextColor(tcell.ColorWhite))
-		v.table.SetCell(row, 4, tview.NewTableCell(usageStr).SetTextColor(themes.TronGreen))
+		v.table.SetCell(row, 4, tview.NewTableCell(usageStr).SetTextColor(usageColor))
 
 		row++
 		for _, child := range d.Children {

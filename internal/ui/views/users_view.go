@@ -1,6 +1,8 @@
 package views
 
 import (
+	"fmt"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/ui/themes"
@@ -9,15 +11,15 @@ import (
 
 type UsersView struct {
 	*tview.Flex
-	manager ports.UserManager
 	table   *tview.Table
+	manager ports.UserManager
 }
 
 func NewUsersView(manager ports.UserManager) *UsersView {
 	v := &UsersView{
 		Flex:    tview.NewFlex(),
-		manager: manager,
 		table:   tview.NewTable(),
+		manager: manager,
 	}
 
 	v.setupUI()
@@ -27,29 +29,22 @@ func NewUsersView(manager ports.UserManager) *UsersView {
 
 func (v *UsersView) setupUI() {
 	v.SetDirection(tview.FlexRow)
-	v.SetBorder(true).SetTitle(" Users & Groups ").SetBorderColor(themes.TronCyan)
-
-	v.table.SetBorders(true).SetBorderColor(themes.TronBlue)
+	v.table.SetBorders(true).SetTitle(" USERS ").SetBorderColor(themes.TronCyan)
 	v.table.SetSelectable(true, false)
-
 	v.AddItem(v.table, 0, 1, true)
 }
 
 func (v *UsersView) refreshData() {
 	v.table.Clear()
-
-	// Headers
-	headers := []string{"Username", "UID", "GID", "Home", "Shell"}
+	headers := []string{"Username", "UID", "GID", "Shell", "Home"}
 	for i, h := range headers {
-		v.table.SetCell(0, i, tview.NewTableCell(h).
-			SetTextColor(themes.TronYellow).
-			SetAlign(tview.AlignCenter).
-			SetSelectable(false))
+		v.table.SetCell(0, i, tview.NewTableCell(h).SetTextColor(themes.TronYellow).SetSelectable(false))
 	}
 
 	users, err := v.manager.ListUsers()
 	if err != nil {
-		v.table.SetCell(1, 0, tview.NewTableCell("Error: "+err.Error()).SetTextColor(tcell.ColorRed))
+		// Show error in table
+		v.table.SetCell(1, 0, tview.NewTableCell(fmt.Sprintf("Error: %v", err)).SetTextColor(tcell.ColorRed))
 		return
 	}
 
@@ -58,7 +53,7 @@ func (v *UsersView) refreshData() {
 		v.table.SetCell(row, 0, tview.NewTableCell(u.Username).SetTextColor(themes.TronCyan))
 		v.table.SetCell(row, 1, tview.NewTableCell(u.UID).SetTextColor(tcell.ColorWhite))
 		v.table.SetCell(row, 2, tview.NewTableCell(u.GID).SetTextColor(tcell.ColorWhite))
-		v.table.SetCell(row, 3, tview.NewTableCell(u.HomeDir).SetTextColor(tcell.ColorWhite))
-		v.table.SetCell(row, 4, tview.NewTableCell(u.Shell).SetTextColor(tcell.ColorWhite))
+		v.table.SetCell(row, 3, tview.NewTableCell(u.Shell).SetTextColor(tcell.ColorWhite))
+		v.table.SetCell(row, 4, tview.NewTableCell(u.HomeDir).SetTextColor(tcell.ColorWhite))
 	}
 }

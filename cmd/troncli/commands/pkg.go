@@ -7,6 +7,7 @@ import (
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/pkg"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -104,9 +105,23 @@ var pkgSearchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - PESQUISA DE PACOTES: %s", args[0]))
+		table.SetHeaders([]string{"NAME", "VERSION", "MANAGER", "INSTALLED", "DESCRIPTION"})
+
 		for _, res := range results {
-			fmt.Println(res)
+			desc := res.Description
+			if len(desc) > 40 {
+				desc = desc[:37] + "..."
+			}
+			installed := "No"
+			if res.Installed {
+				installed = "Yes"
+			}
+			table.AddRow([]string{res.Name, res.Version, res.Manager, installed, desc})
 		}
+		table.SetFooter(fmt.Sprintf("Results found: %d", len(results)))
+		table.Render()
 	},
 }
 

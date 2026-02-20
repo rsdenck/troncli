@@ -9,6 +9,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/disk"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -36,28 +37,40 @@ var diskUsageCmd = &cobra.Command{
 				fmt.Printf("Error listing devices: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Printf("%-10s %-10s %-10s %-20s\n", "NAME", "SIZE", "TYPE", "MOUNTPOINT")
-			var printDev func(d ports.BlockDevice, indent string)
-			printDev = func(d ports.BlockDevice, indent string) {
-				fmt.Printf("%-10s %-10s %-10s %-20s\n", indent+d.Name, d.Size, d.Type, d.MountPoint)
+
+			table := console.NewBoxTable(os.Stdout)
+			table.SetTitle("TRONCLI - USO DE DISCO (DEVICES)")
+			table.SetHeaders([]string{"NAME", "SIZE", "TYPE", "MOUNTPOINT"})
+
+			var addDev func(d ports.BlockDevice, indent string)
+			addDev = func(d ports.BlockDevice, indent string) {
+				table.AddRow([]string{indent + d.Name, d.Size, d.Type, d.MountPoint})
 				for _, child := range d.Children {
-					printDev(child, indent+"  ")
+					addDev(child, indent+"  ")
 				}
 			}
 			for _, d := range devices {
-				printDev(d, "")
+				addDev(d, "")
 			}
+			table.Render()
 		} else {
 			usage, err := manager.GetFilesystemUsage(args[0])
 			if err != nil {
 				fmt.Printf("Error getting usage for %s: %v\n", args[0], err)
 				os.Exit(1)
 			}
-			fmt.Printf("Path: %s\n", usage.Path)
-			fmt.Printf("Total: %d bytes\n", usage.Total)
-			fmt.Printf("Used:  %d bytes\n", usage.Used)
-			fmt.Printf("Free:  %d bytes\n", usage.Free)
-			fmt.Printf("Inodes: %d (Free: %d)\n", usage.Files, usage.FilesFree)
+
+			table := console.NewBoxTable(os.Stdout)
+			table.SetTitle(fmt.Sprintf("TRONCLI - USO DE DISCO: %s", args[0]))
+			table.SetHeaders([]string{"METRIC", "VALUE"})
+
+			table.AddRow([]string{"Path", usage.Path})
+			table.AddRow([]string{"Total", fmt.Sprintf("%d bytes", usage.Total)})
+			table.AddRow([]string{"Used", fmt.Sprintf("%d bytes", usage.Used)})
+			table.AddRow([]string{"Free", fmt.Sprintf("%d bytes", usage.Free)})
+			table.AddRow([]string{"Inodes", fmt.Sprintf("%d (Free: %d)", usage.Files, usage.FilesFree)})
+
+			table.Render()
 		}
 	},
 }
@@ -103,7 +116,12 @@ var diskHealthCmd = &cobra.Command{
 		default:
 			icon = "✅"
 		}
-		fmt.Printf("%s Disk Health: %s\n", icon, status)
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - SAÚDE DO DISCO")
+		table.SetHeaders([]string{"STATUS", "HEALTH"})
+		table.AddRow([]string{icon, status})
+		table.Render()
 	},
 }
 
@@ -135,9 +153,19 @@ var diskTopFilesCmd = &cobra.Command{
 			fmt.Printf("Error scanning files: %v\n", err)
 			os.Exit(1)
 		}
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - TOP %d ARQUIVOS: %s", count, path))
+		table.SetHeaders([]string{"SIZE", "PATH"})
+
 		for _, f := range files {
-			fmt.Printf("%-10s %s\n", formatBytes(f.Size), f.Path)
+			p := f.Path
+			if len(p) > 60 {
+				p = "..." + p[len(p)-57:]
+			}
+			table.AddRow([]string{formatBytes(f.Size), p})
 		}
+		table.Render()
 	},
 }
 
@@ -164,7 +192,14 @@ var diskInodesCmd = &cobra.Command{
 		if total > 0 {
 			percent = (float64(used) / float64(total)) * 100
 		}
-		fmt.Printf("Inodes on %s: %d / %d (%.2f%%)\n", path, used, total, percent)
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - INODES: %s", path))
+		table.SetHeaders([]string{"METRIC", "VALUE"})
+		table.AddRow([]string{"Used", fmt.Sprintf("%d", used)})
+		table.AddRow([]string{"Total", fmt.Sprintf("%d", total)})
+		table.AddRow([]string{"Usage %", fmt.Sprintf("%.2f%%", percent)})
+		table.Render()
 	},
 }
 

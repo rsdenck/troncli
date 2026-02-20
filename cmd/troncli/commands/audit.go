@@ -9,6 +9,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/audit"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -35,11 +36,20 @@ var auditLoginsCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("%-20s %-15s %-30s\n", "USER", "IP", "TIMESTAMP")
-		fmt.Println("----------------------------------------------------------------")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - HISTÓRICO DE LOGINS (24H)")
+		table.SetHeaders([]string{"USER", "IP", "MESSAGE"})
+
 		for _, e := range events {
-			fmt.Printf("%-20s %-15s %-30s\n", e.User, e.IP, e.Message)
+			// Truncate message if needed
+			msg := e.Message
+			if len(msg) > 50 {
+				msg = msg[:47] + "..."
+			}
+			table.AddRow([]string{e.User, e.IP, msg})
 		}
+		table.SetFooter(fmt.Sprintf("Total logins: %d", len(events)))
+		table.Render()
 	},
 }
 
@@ -59,10 +69,15 @@ var auditSudoersCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println("Privileged Users (sudo/wheel/root):")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - USUÁRIOS PRIVILEGIADOS (SUDO/WHEEL/ROOT)")
+		table.SetHeaders([]string{"USERNAME"})
+
 		for _, u := range users {
-			fmt.Println("- " + u)
+			table.AddRow([]string{u})
 		}
+		table.SetFooter(fmt.Sprintf("Total privileged users: %d", len(users)))
+		table.Render()
 	},
 }
 
@@ -93,9 +108,19 @@ var auditFileChangesCmd = &cobra.Command{
 			return
 		}
 
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - ALTERAÇÕES EM ARQUIVOS (24H)")
+		table.SetHeaders([]string{"SEVERITY", "MESSAGE"})
+
 		for _, e := range events {
-			fmt.Printf("[%s] %s\n", e.Severity, e.Message)
+			msg := e.Message
+			if len(msg) > 60 {
+				msg = msg[:57] + "..."
+			}
+			table.AddRow([]string{e.Severity, msg})
 		}
+		table.SetFooter(fmt.Sprintf("Total events: %d", len(events)))
+		table.Render()
 	},
 }
 
@@ -115,11 +140,19 @@ var auditCommandsCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("%-20s %-50s\n", "USER", "COMMAND")
-		fmt.Println("----------------------------------------------------------------")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - HISTÓRICO DE COMANDOS (SUDO/LOGS)")
+		table.SetHeaders([]string{"USER", "COMMAND"})
+
 		for _, e := range events {
-			fmt.Printf("%-20s %-50s\n", e.User, e.Message)
+			cmd := e.Message
+			if len(cmd) > 60 {
+				cmd = cmd[:57] + "..."
+			}
+			table.AddRow([]string{e.User, cmd})
 		}
+		table.SetFooter(fmt.Sprintf("Total commands: %d", len(events)))
+		table.Render()
 	},
 }
 

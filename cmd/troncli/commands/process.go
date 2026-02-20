@@ -8,6 +8,7 @@ import (
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/process"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -44,11 +45,26 @@ var treeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println("Process Tree:")
-		fmt.Printf("%-8s %-8s %-10s %-10s %s\n", "PID", "PPID", "USER", "STATE", "COMMAND")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - ÁRVORE DE PROCESSOS")
+		table.SetHeaders([]string{"PID", "PPID", "USER", "STATE", "COMMAND"})
+
 		for _, node := range nodes {
-			fmt.Printf("%-8d %-8d %-10s %-10s %s\n", node.PID, node.PPID, node.User, node.State, node.Name)
+			// Truncate name if too long
+			name := node.Name
+			if len(name) > 50 {
+				name = name[:47] + "..."
+			}
+			table.AddRow([]string{
+				fmt.Sprintf("%d", node.PID),
+				fmt.Sprintf("%d", node.PPID),
+				node.User,
+				node.State,
+				name,
+			})
 		}
+		table.SetFooter(fmt.Sprintf("Total processes: %d", len(nodes)))
+		table.Render()
 	},
 }
 
@@ -75,10 +91,18 @@ var openFilesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Open files for PID %d:\n", pid)
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - ARQUIVOS ABERTOS (PID %d)", pid))
+		table.SetHeaders([]string{"FILE"})
+
 		for _, f := range files {
-			fmt.Println(f)
+			if len(f) > 80 {
+				f = f[:77] + "..."
+			}
+			table.AddRow([]string{f})
 		}
+		table.SetFooter(fmt.Sprintf("Total files: %d", len(files)))
+		table.Render()
 	},
 }
 
@@ -105,10 +129,15 @@ var processPortsCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Ports for PID %d:\n", pid)
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - PORTAS DO PROCESSO (PID %d)", pid))
+		table.SetHeaders([]string{"PORT/PROTOCOL"})
+
 		for _, p := range ports {
-			fmt.Println(p)
+			table.AddRow([]string{p})
 		}
+		table.SetFooter(fmt.Sprintf("Total ports: %d", len(ports)))
+		table.Render()
 	},
 }
 
@@ -128,10 +157,15 @@ var listeningCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println("Listening Ports:")
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - PORTAS EM ESCUTA (LISTENING)")
+		table.SetHeaders([]string{"PORT/PROTOCOL"})
+
 		for _, p := range ports {
-			fmt.Println(p)
+			table.AddRow([]string{p})
 		}
+		table.SetFooter(fmt.Sprintf("Total listening ports: %d", len(ports)))
+		table.Render()
 	},
 }
 

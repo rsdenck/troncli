@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/bash"
+	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/spf13/cobra"
 )
 
 var bashCmd = &cobra.Command{
@@ -33,7 +34,21 @@ var bashRunCmd = &cobra.Command{
 			fmt.Printf("Erro ao executar comando: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(output)
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - BASH EXEC: %s", args[0]))
+		table.SetHeaders([]string{"OUTPUT"})
+
+		// Split output by lines to fit in table
+		// This is a simple approach; might need better handling for very long outputs
+		lines := splitLines(output)
+		for _, line := range lines {
+			if len(line) > 100 {
+				line = line[:97] + "..."
+			}
+			table.AddRow([]string{line})
+		}
+		table.Render()
 	},
 }
 
@@ -53,8 +68,37 @@ var bashScriptCmd = &cobra.Command{
 			fmt.Printf("Erro ao executar script: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(output)
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle(fmt.Sprintf("TRONCLI - BASH SCRIPT: %s", args[0]))
+		table.SetHeaders([]string{"OUTPUT"})
+
+		lines := splitLines(output)
+		for _, line := range lines {
+			if len(line) > 100 {
+				line = line[:97] + "..."
+			}
+			table.AddRow([]string{line})
+		}
+		table.Render()
 	},
+}
+
+func splitLines(s string) []string {
+	var lines []string
+	current := ""
+	for _, c := range s {
+		if c == '\n' {
+			lines = append(lines, current)
+			current = ""
+		} else {
+			current += string(c)
+		}
+	}
+	if current != "" {
+		lines = append(lines, current)
+	}
+	return lines
 }
 
 func init() {

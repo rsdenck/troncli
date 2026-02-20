@@ -190,21 +190,12 @@ func (m *LinuxNetworkManager) RunTraceRoute(target string) (string, error) {
 }
 
 func (m *LinuxNetworkManager) RunDig(target string) (string, error) {
-	cmd := exec.Command("dig", target, "+short")
-	out, err := cmd.Output()
-	return string(out), err
+	return RunNativeDig(target)
 }
 
-func (m *LinuxNetworkManager) RunNmap(target string, options string) (string, error) {
-	// Security: validate options to prevent command injection if options come from user input
-	// For now, assuming safe internal usage or simple options
-	args := []string{target}
-	if options != "" {
-		args = append(strings.Fields(options), target)
-	}
-	cmd := exec.Command("nmap", args...)
-	out, err := cmd.Output()
-	return string(out), err
+func (m *LinuxNetworkManager) RunNmap(target string, options string) ([]ports.PortScanResult, error) {
+	ports := ParsePortsFromOptions(options)
+	return RunNativePortScan(target, ports)
 }
 
 func (m *LinuxNetworkManager) RunTcpdump(interfaceName string, filter string, durationSeconds int) (string, error) {

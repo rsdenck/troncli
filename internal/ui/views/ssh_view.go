@@ -53,7 +53,7 @@ func (v *SSHView) setupUI() {
 	})
 
 	v.list.SetChangedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
-		v.details.SetText(fmt.Sprintf("%sSelected Profile: %s%s\n\n%sPress Enter to Connect via rsd-sshm",
+		v.details.SetText(fmt.Sprintf("%sSelected Profile: %s%s\n\n%sPress Enter to Connect via System SSH",
 			themes.ColorNeonCyan, themes.ColorWhite, mainText, themes.ColorWarning))
 	})
 }
@@ -62,9 +62,6 @@ func (v *SSHView) loadData() {
 	profiles, err := v.client.ListProfiles()
 	if err != nil {
 		v.details.SetText(fmt.Sprintf("[red]Error loading profiles: %v", err))
-		// Add some dummy profiles if none found (mock behavior for demo)
-		v.list.AddItem("demo-server-01", "", 0, nil)
-		v.list.AddItem("demo-db-01", "", 0, nil)
 		return
 	}
 
@@ -77,7 +74,7 @@ func (v *SSHView) connect(profile string) {
 	v.app.Suspend(func() {
 		// Clear screen
 		fmt.Print("\033[H\033[2J")
-		fmt.Printf("Connecting to %s via rsd-sshm...\n", profile)
+		fmt.Printf("Connecting to %s via System SSH...\n", profile)
 
 		err := v.client.Connect(profile)
 		if err != nil {

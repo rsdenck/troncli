@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/plugin"
+	"github.com/mascli/troncli/internal/ui/console"
 	"github.com/spf13/cobra"
 )
 
@@ -30,13 +32,21 @@ var pluginListCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("erro ao listar: %w", err)
 		}
-		if len(plugins) == 0 {
-			fmt.Println("Nenhum plugin instalado.")
-			return nil
-		}
+
+		table := console.NewBoxTable(os.Stdout)
+		table.SetTitle("TRONCLI - PLUGINS INSTALADOS")
+		table.SetHeaders([]string{"NAME", "VERSION", "DESCRIPTION"})
+
 		for _, p := range plugins {
-			fmt.Printf("- %s (v%s): %s\n", p.Name, p.Version, p.Description)
+			desc := p.Description
+			if len(desc) > 50 {
+				desc = desc[:47] + "..."
+			}
+			table.AddRow([]string{p.Name, p.Version, desc})
 		}
+		table.SetFooter(fmt.Sprintf("Total plugins: %d", len(plugins)))
+		table.Render()
+
 		return nil
 	},
 }
@@ -94,7 +104,7 @@ var pluginExecCmd = &cobra.Command{
 		}
 		name := args[0]
 		pluginArgs := args[1:]
-		
+
 		slog.Info("Executando plugin", "plugin", name, "args", pluginArgs)
 		if err := manager.ExecutePlugin(context.Background(), name, pluginArgs...); err != nil {
 			return fmt.Errorf("erro ao executar plugin '%s': %w", name, err)
