@@ -1,6 +1,6 @@
 # Maintainer: Ranlens Denck <ranlens.denck@protonmail.com>
 pkgname=troncli
-pkgver=0.2.20
+pkgver=0.2.21
 pkgrel=1
 pkgdesc="Production Grade Linux System Administration CLI"
 arch=('x86_64' 'aarch64')

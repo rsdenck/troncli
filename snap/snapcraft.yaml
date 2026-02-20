@@ -1,6 +1,6 @@
 name: troncli
 base: core22
-version: '0.2.20'
+version: '0.2.21'
 summary: Production Grade Linux System Administration CLI
 description: |
   TronCLI is a comprehensive tool for Linux system administration,

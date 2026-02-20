@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION="0.2.20"
+VERSION="0.2.21"
 RPM_ROOT="dist/rpm"
 
 echo "Building RPM package for TronCLI v${VERSION}..."
@@ -22,6 +22,6 @@ cp packaging/rpm/troncli.spec "$RPM_ROOT/SPECS/"
 
 # Build RPM
 echo "Running rpmbuild..."
-rpmbuild --define "_topdir $(pwd)/$RPM_ROOT" -ba "$RPM_ROOT/SPECS/troncli.spec"
+rpmbuild --define "_topdir $(pwd)/$RPM_ROOT" --nodeps -ba "$RPM_ROOT/SPECS/troncli.spec"
 
 echo "RPM package built successfully at $RPM_ROOT/RPMS/"

@@ -4,7 +4,7 @@
 
 set -e
 
-VERSION="0.2.20"
+VERSION="0.2.21"
 ARCH="amd64"
 PKG_DIR="packaging/deb"
 BUILD_DIR="dist/deb/troncli_${VERSION}_${ARCH}"

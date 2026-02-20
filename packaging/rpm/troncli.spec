@@ -1,5 +1,5 @@
 Name:           troncli
-Version:        0.2.19
+Version:        0.2.21
 Release:        1%{?dist}
 Summary:        Production Grade Linux System Administration CLI
 License:        MIT
@@ -34,5 +34,5 @@ install -m 644 docs/man/troncli.1 %{buildroot}/usr/share/man/man1/
 %license LICENSE
 
 %changelog
-* Wed Feb 19 2026 Ranlens Denck <ranlens.denck@protonmail.com> - 0.2.20-1
-- Initial RPM release
+* Fri Feb 20 2026 Ranlens Denck <ranlens.denck@protonmail.com> - 0.2.21-1
+- Fix RPM build dependencies and changelog date
