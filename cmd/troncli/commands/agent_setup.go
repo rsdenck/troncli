@@ -14,14 +14,14 @@ var agentSetupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Setup TRON ROOT AGENT (llama.cpp + model)",
 	Long: `Instala e configura o TRON ROOT AGENT:
-  1. Clona e compila llama.cpp
+  1. Clona e compila llama.cpp (usando CMake)
   2. Baixa o modelo Qwen2.5-Coder-7B-Instruct (GGUF)
   3. Configura paths no ~/.troncli/
 
 Requisitos:
   - Git
+  - CMake (ou Make como fallback)
   - GCC/G++ (build-essential)
-  - Make
   - ~4GB de espaço em disco para o modelo`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return setupRootAgent()
@@ -76,32 +76,71 @@ func setupRootAgent() error {
 			}
 		}
 
-		// Compile llama.cpp
+		// Compile llama.cpp using CMake
 		fmt.Printf("\n%s🔨 Compiling llama.cpp (this may take a few minutes)...%s\n", console.ColorCyan, console.ColorReset)
 		
 		// Check for AVX2 support
-		makeCmd := "make"
-		if hasAVX2() {
+		avx2Detected := hasAVX2()
+		if avx2Detected {
 			fmt.Printf("  %s✓%s AVX2 detected, using optimized build\n", console.ColorGreen, console.ColorReset)
-			makeCmd = "make LLAMA_NATIVE=1"
 		}
 
-		cmd := exec.Command("sh", "-c", makeCmd)
-		cmd.Dir = llamaCppDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to compile llama.cpp: %w", err)
+		// Create build directory
+		buildDir := filepath.Join(llamaCppDir, "build")
+		if err := os.MkdirAll(buildDir, 0755); err != nil {
+			return fmt.Errorf("failed to create build directory: %w", err)
+		}
+
+		// CMake configure
+		cmakeArgs := []string{"..", "-DCMAKE_BUILD_TYPE=Release"}
+		if avx2Detected {
+			cmakeArgs = append(cmakeArgs, "-DLLAMA_NATIVE=ON")
+		}
+
+		cmakeCmd := exec.Command("cmake", cmakeArgs...)
+		cmakeCmd.Dir = buildDir
+		cmakeCmd.Stdout = os.Stdout
+		cmakeCmd.Stderr = os.Stderr
+		if err := cmakeCmd.Run(); err != nil {
+			// Fallback: Try without cmake, use make directly
+			fmt.Printf("  %s⚠️  CMake not found, trying legacy make...%s\n", console.ColorYellow, console.ColorReset)
+			
+			makeCmd := "make"
+			if avx2Detected {
+				makeCmd = "make LLAMA_NATIVE=1"
+			}
+			
+			legacyCmd := exec.Command("sh", "-c", makeCmd)
+			legacyCmd.Dir = llamaCppDir
+			legacyCmd.Stdout = os.Stdout
+			legacyCmd.Stderr = os.Stderr
+			if err := legacyCmd.Run(); err != nil {
+				return fmt.Errorf("failed to compile llama.cpp (tried cmake and make): %w", err)
+			}
+		} else {
+			// CMake build
+			buildCmd := exec.Command("cmake", "--build", ".", "--config", "Release", "-j", "4")
+			buildCmd.Dir = buildDir
+			buildCmd.Stdout = os.Stdout
+			buildCmd.Stderr = os.Stderr
+			if err := buildCmd.Run(); err != nil {
+				return fmt.Errorf("failed to build llama.cpp: %w", err)
+			}
 		}
 
 		// Copy binary to bin directory
 		fmt.Printf("\n%s📦 Installing binary...%s\n", console.ColorCyan, console.ColorReset)
 		
-		// Try different binary names (llama-cli or main)
-		binaryNames := []string{"llama-cli", "main"}
+		// Try different binary locations (CMake puts them in build/bin/)
+		binaryPaths := []string{
+			filepath.Join(buildDir, "bin", "llama-cli"),
+			filepath.Join(buildDir, "bin", "main"),
+			filepath.Join(llamaCppDir, "llama-cli"),
+			filepath.Join(llamaCppDir, "main"),
+		}
+		
 		var sourceBinary string
-		for _, name := range binaryNames {
-			path := filepath.Join(llamaCppDir, name)
+		for _, path := range binaryPaths {
 			if _, err := os.Stat(path); err == nil {
 				sourceBinary = path
 				break
@@ -109,7 +148,7 @@ func setupRootAgent() error {
 		}
 
 		if sourceBinary == "" {
-			return fmt.Errorf("llama.cpp binary not found after compilation")
+			return fmt.Errorf("llama.cpp binary not found after compilation. Tried: %v", binaryPaths)
 		}
 
 		// Copy to bin directory

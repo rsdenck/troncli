@@ -22,7 +22,7 @@ $ troncli agent
 ║                                                            ║
 ║  🚀 PRIMEIRA EXECUÇÃO - SETUP AUTOMÁTICO                   ║
 ║                                                            ║
-║  Instalando llama.cpp + Modelo Qwen2.5-Coder-7B           ║
+║  Instalando llama.cpp + Modelo Qwen2.5-Coder-7B            ║
 ║  Tempo estimado: ~10 minutos                               ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
