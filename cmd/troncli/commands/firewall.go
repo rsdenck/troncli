@@ -8,7 +8,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/firewall"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -70,7 +70,7 @@ var fwListCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - REGRAS DE FIREWALL")
+		table.SetTitle("TRONCLI: FIREWALL RULES")
 		table.SetHeaders([]string{"ID", "ACTION", "PROTO", "PORT", "COMMENT"})
 
 		for _, r := range rules {
@@ -82,7 +82,7 @@ var fwListCmd = &cobra.Command{
 			table.AddRow([]string{r.ID, r.Action, r.Protocol, r.Port, comment})
 		}
 		table.SetFooter(fmt.Sprintf("Total rules: %d", len(rules)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

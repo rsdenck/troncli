@@ -6,7 +6,7 @@ import (
 
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/services"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -28,8 +28,7 @@ var systemInfoCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - INFORMAÇÕES DO SISTEMA")
-		table.SetHeaders([]string{"PROPERTY", "VALUE"})
+		table.SetTitle("TRONCLI: SYSTEM INFO")
 
 		table.AddRow([]string{"OS", fmt.Sprintf("%s %s", profile.Distro, profile.Version)})
 		table.AddRow([]string{"Init System", profile.InitSystem})
@@ -38,7 +37,7 @@ var systemInfoCmd = &cobra.Command{
 		table.AddRow([]string{"Network Stack", profile.NetworkStack})
 		table.AddRow([]string{"Environment", profile.Environment})
 
-		table.Render()
+		table.RenderKeyValue()
 	},
 }
 
@@ -54,18 +53,17 @@ var systemProfileCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - PERFIL DETALHADO")
-		table.SetHeaders([]string{"KEY", "VALUE"})
+		table.SetTitle("TRONCLI: SYSTEM PROFILE")
 
 		table.AddRow([]string{"Distro", profile.Distro})
 		table.AddRow([]string{"Version", profile.Version})
-		table.AddRow([]string{"InitSystem", profile.InitSystem})
-		table.AddRow([]string{"PackageManager", profile.PackageManager})
+		table.AddRow([]string{"Init System", profile.InitSystem})
+		table.AddRow([]string{"Package Manager", profile.PackageManager})
 		table.AddRow([]string{"Firewall", profile.Firewall})
-		table.AddRow([]string{"NetworkStack", profile.NetworkStack})
+		table.AddRow([]string{"Network Stack", profile.NetworkStack})
 		table.AddRow([]string{"Environment", profile.Environment})
 
-		table.Render()
+		table.RenderKeyValue()
 	},
 }
 

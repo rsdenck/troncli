@@ -4,9 +4,20 @@ allowed_intents:
 - open_firewall
 - audit_security
 - network_config
+- system_modify
+- kernel_config
+- service_manage
+- user_manage
+- disk_manage
+- network_manage
+- security_audit
+- bash_execute
+- file_modify
+- process_manage
 
 blocked_intents:
-- delete_root
-- format_disk
+- delete_kernel
+- format_root_disk
+- remove_system_libs
 
-risk_level: "low"
+risk_level: "high"

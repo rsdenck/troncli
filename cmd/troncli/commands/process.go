@@ -8,7 +8,7 @@ import (
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/process"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +46,7 @@ var treeCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - ÁRVORE DE PROCESSOS")
+		table.SetTitle("TRONCLI: PROCESS TREE")
 		table.SetHeaders([]string{"PID", "PPID", "USER", "STATE", "COMMAND"})
 
 		for _, node := range nodes {
@@ -64,7 +64,7 @@ var treeCmd = &cobra.Command{
 			})
 		}
 		table.SetFooter(fmt.Sprintf("Total processes: %d", len(nodes)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -92,7 +92,7 @@ var openFilesCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - ARQUIVOS ABERTOS (PID %d)", pid))
+		table.SetTitle(fmt.Sprintf("TRONCLI: OPEN FILES › PID %d", pid))
 		table.SetHeaders([]string{"FILE"})
 
 		for _, f := range files {
@@ -102,7 +102,7 @@ var openFilesCmd = &cobra.Command{
 			table.AddRow([]string{f})
 		}
 		table.SetFooter(fmt.Sprintf("Total files: %d", len(files)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -130,14 +130,14 @@ var processPortsCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - PORTAS DO PROCESSO (PID %d)", pid))
+		table.SetTitle(fmt.Sprintf("TRONCLI: PROCESS PORTS › PID %d", pid))
 		table.SetHeaders([]string{"PORT/PROTOCOL"})
 
 		for _, p := range ports {
 			table.AddRow([]string{p})
 		}
 		table.SetFooter(fmt.Sprintf("Total ports: %d", len(ports)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -158,14 +158,14 @@ var listeningCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - PORTAS EM ESCUTA (LISTENING)")
+		table.SetTitle("TRONCLI: LISTENING PORTS")
 		table.SetHeaders([]string{"PORT/PROTOCOL"})
 
 		for _, p := range ports {
 			table.AddRow([]string{p})
 		}
 		table.SetFooter(fmt.Sprintf("Total listening ports: %d", len(ports)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

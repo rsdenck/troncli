@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mascli/troncli/internal/console"
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/bash"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/policy"
 	"github.com/spf13/cobra"
 )
 
@@ -114,5 +115,9 @@ func getBashManager() (ports.BashManager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect system profile: %w", err)
 	}
-	return bash.NewUniversalBashManager(executor, profile), nil
+
+	// Initialize policy engine
+	policyEngine := policy.NewPolicyEngine()
+
+	return bash.NewUniversalBashManager(executor, profile, policyEngine), nil
 }

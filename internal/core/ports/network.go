@@ -22,6 +22,48 @@ type SocketStat struct {
 	Process  string
 }
 
+// TCPSocket represents a TCP socket from /proc/net/tcp
+type TCPSocket struct {
+	LocalAddr  string
+	LocalPort  int
+	RemoteAddr string
+	RemotePort int
+	State      string
+	UID        int
+	Inode      int
+}
+
+// UDPSocket represents a UDP socket from /proc/net/udp
+type UDPSocket struct {
+	LocalAddr  string
+	LocalPort  int
+	RemoteAddr string
+	RemotePort int
+	State      string
+	UID        int
+	Inode      int
+}
+
+// Route represents a routing table entry from /proc/net/route
+type Route struct {
+	Interface   string
+	Destination string
+	Gateway     string
+	Flags       int
+	RefCnt      int
+	Use         int
+	Metric      int
+	Mask        string
+}
+
+// SocketStats represents aggregated socket statistics
+type SocketStats struct {
+	TCP  []TCPSocket
+	TCP6 []TCPSocket
+	UDP  []UDPSocket
+	UDP6 []UDPSocket
+}
+
 // PortScanResult represents a port scan result
 type PortScanResult struct {
 	Port     int

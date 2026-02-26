@@ -8,7 +8,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/users"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -35,15 +35,15 @@ var userListCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - LISTAGEM DE USUÁRIOS")
+		table.SetTitle("TRONCLI: USERS")
 		table.SetHeaders([]string{"USERNAME", "UID", "GID", "SHELL", "HOME"})
 
 		for _, u := range usersList {
 			table.AddRow([]string{u.Username, u.UID, u.GID, u.Shell, u.HomeDir})
 		}
 
-		table.SetFooter(fmt.Sprintf("Total de usuários: %d", len(usersList)))
-		table.Render()
+		table.SetFooter(fmt.Sprintf("Total users: %d", len(usersList)))
+		table.RenderBox()
 	},
 }
 
@@ -136,7 +136,7 @@ var groupListCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - LISTAGEM DE GRUPOS")
+		table.SetTitle("TRONCLI: GROUPS")
 		table.SetHeaders([]string{"GROUP", "GID", "MEMBERS"})
 
 		for _, g := range groups {
@@ -148,8 +148,8 @@ var groupListCmd = &cobra.Command{
 			table.AddRow([]string{g.Groupname, g.GID, members})
 		}
 
-		table.SetFooter(fmt.Sprintf("Total de grupos: %d", len(groups)))
-		table.Render()
+		table.SetFooter(fmt.Sprintf("Total groups: %d", len(groups)))
+		table.RenderBox()
 	},
 }
 

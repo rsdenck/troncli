@@ -1,3 +1,5 @@
+//go:build linux
+
 package users
 
 import (
@@ -6,18 +8,13 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 )
 
-type LinuxUserManager struct {
-	executor adapter.Executor
-}
+type LinuxUserManager struct{}
 
 func NewLinuxUserManager() ports.UserManager {
-	return &LinuxUserManager{
-		executor: adapter.NewExecutor(),
-	}
+	return &LinuxUserManager{}
 }
 
 func (m *LinuxUserManager) ListUsers() ([]ports.User, error) {
@@ -32,17 +29,16 @@ func (m *LinuxUserManager) ListUsers() ([]ports.User, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, ":")
-		if len(parts) < 7 {
-			continue
+		if len(parts) >= 7 {
+			users = append(users, ports.User{
+				Username: parts[0],
+				UID:      parts[2],
+				GID:      parts[3],
+				Info:     parts[4],
+				HomeDir:  parts[5],
+				Shell:    parts[6],
+			})
 		}
-		users = append(users, ports.User{
-			Username: parts[0],
-			UID:      parts[2],
-			GID:      parts[3],
-			Info:     parts[4],
-			HomeDir:  parts[5],
-			Shell:    parts[6],
-		})
 	}
 	return users, nil
 }
@@ -59,31 +55,43 @@ func (m *LinuxUserManager) ListGroups() ([]ports.Group, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, ":")
-		if len(parts) < 4 {
-			continue
+		if len(parts) >= 4 {
+			members := strings.Split(parts[3], ",")
+			if len(members) == 1 && members[0] == "" {
+				members = nil
+			}
+			groups = append(groups, ports.Group{
+				Groupname: parts[0],
+				GID:       parts[2],
+				Members:   members,
+			})
 		}
-
-		members := []string{}
-		if parts[3] != "" {
-			members = strings.Split(parts[3], ",")
-		}
-
-		groups = append(groups, ports.Group{
-			Groupname: parts[0],
-			GID:       parts[2],
-			Members:   members,
-		})
 	}
 	return groups, nil
 }
 
+func (m *LinuxUserManager) DeleteGroup(name string) error {
+	return exec.Command("groupdel", name).Run()
+}
+
+func (m *LinuxUserManager) AddGroup(name string, gid string) error {
+	args := []string{"groupadd", name}
+	if gid != "" {
+		args = append(args, "-g", gid)
+	}
+	return exec.Command(args[0], args[1:]...).Run()
+}
+
 func (m *LinuxUserManager) AddUser(username string, options ports.UserOptions) error {
-	args := []string{"useradd"}
+	args := []string{"useradd", username}
 	if options.UID != "" {
 		args = append(args, "-u", options.UID)
 	}
 	if options.GID != "" {
 		args = append(args, "-g", options.GID)
+	}
+	if len(options.Groups) > 0 {
+		args = append(args, "-G", strings.Join(options.Groups, ","))
 	}
 	if options.Shell != "" {
 		args = append(args, "-s", options.Shell)
@@ -94,9 +102,7 @@ func (m *LinuxUserManager) AddUser(username string, options ports.UserOptions) e
 	if options.Comment != "" {
 		args = append(args, "-c", options.Comment)
 	}
-	args = append(args, username)
-
-	return exec.Command("sudo", args...).Run()
+	return exec.Command(args[0], args[1:]...).Run()
 }
 
 func (m *LinuxUserManager) DeleteUser(username string, removeHome bool) error {
@@ -105,16 +111,19 @@ func (m *LinuxUserManager) DeleteUser(username string, removeHome bool) error {
 		args = append(args, "-r")
 	}
 	args = append(args, username)
-	return exec.Command("sudo", args...).Run()
+	return exec.Command(args[0], args[1:]...).Run()
 }
 
 func (m *LinuxUserManager) ModifyUser(username string, options ports.UserOptions) error {
-	args := []string{"usermod"}
+	args := []string{"usermod", username}
 	if options.UID != "" {
 		args = append(args, "-u", options.UID)
 	}
 	if options.GID != "" {
 		args = append(args, "-g", options.GID)
+	}
+	if len(options.Groups) > 0 {
+		args = append(args, "-G", strings.Join(options.Groups, ","))
 	}
 	if options.Shell != "" {
 		args = append(args, "-s", options.Shell)
@@ -125,21 +134,5 @@ func (m *LinuxUserManager) ModifyUser(username string, options ports.UserOptions
 	if options.Comment != "" {
 		args = append(args, "-c", options.Comment)
 	}
-	// Add other options as needed, e.g. groups
-	args = append(args, username)
-
-	return exec.Command("sudo", args...).Run()
-}
-
-func (m *LinuxUserManager) AddGroup(groupname string, gid string) error {
-	args := []string{"groupadd"}
-	if gid != "" {
-		args = append(args, "-g", gid)
-	}
-	args = append(args, groupname)
-	return exec.Command("sudo", args...).Run()
-}
-
-func (m *LinuxUserManager) DeleteGroup(groupname string) error {
-	return exec.Command("sudo", "groupdel", groupname).Run()
+	return exec.Command(args[0], args[1:]...).Run()
 }

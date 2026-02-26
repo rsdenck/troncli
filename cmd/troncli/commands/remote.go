@@ -9,7 +9,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/remote"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +53,7 @@ var remoteExecCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - REMOTE EXEC: %s (%s)", args[1], args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: REMOTE EXEC › %s › %s", args[0], args[1]))
 		table.SetHeaders([]string{"OUTPUT"})
 
 		lines := strings.Split(output, "\n")
@@ -65,7 +65,7 @@ var remoteExecCmd = &cobra.Command{
 				table.AddRow([]string{line})
 			}
 		}
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -103,14 +103,14 @@ var remoteListCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - PERFIS SSH")
+		table.SetTitle("TRONCLI: SSH PROFILES")
 		table.SetHeaders([]string{"PROFILE"})
 
 		for _, p := range profiles {
 			table.AddRow([]string{p})
 		}
 		table.SetFooter(fmt.Sprintf("Total profiles: %d", len(profiles)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

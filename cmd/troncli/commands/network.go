@@ -9,7 +9,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/network"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +36,7 @@ var netInfoCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - INFORMAÇÕES DE REDE")
+		table.SetTitle("TRONCLI: NETWORK INTERFACES")
 		table.SetHeaders([]string{"NAME", "STATE", "MTU", "IPs", "MAC"})
 
 		for _, i := range ifaces {
@@ -46,20 +46,17 @@ var netInfoCmd = &cobra.Command{
 			}
 			table.AddRow([]string{i.Name, i.State, fmt.Sprintf("%d", i.MTU), ips, i.HardwareAddr})
 		}
-		table.Render()
+		table.RenderBox()
 
 		// Hostname and DNS
 		host, _ := m.GetHostname()
 		dns, _ := m.GetDNSConfig()
 
-		fmt.Println() // Spacer
-
 		infoTable := console.NewBoxTable(os.Stdout)
-		infoTable.SetTitle("CONFIGURAÇÃO GERAL")
-		infoTable.SetHeaders([]string{"KEY", "VALUE"})
+		infoTable.SetTitle("TRONCLI: NETWORK CONFIGURATION")
 		infoTable.AddRow([]string{"Hostname", host})
 		infoTable.AddRow([]string{"DNS", fmt.Sprintf("%v", dns)})
-		infoTable.Render()
+		infoTable.RenderKeyValue()
 	},
 }
 
@@ -103,7 +100,7 @@ var netSocketCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - SOCKETS ABERTOS")
+		table.SetTitle("TRONCLI: OPEN SOCKETS")
 		table.SetHeaders([]string{"PROTO", "STATE", "LOCAL", "REMOTE"})
 
 		for _, s := range stats {
@@ -111,7 +108,7 @@ var netSocketCmd = &cobra.Command{
 		}
 
 		table.SetFooter(fmt.Sprintf("Total sockets: %d", len(stats)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -133,7 +130,7 @@ var netTraceCmd = &cobra.Command{
 
 		lines := strings.Split(res, "\n")
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - TRACEROUTE: %s", args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: TRACEROUTE › %s", args[0]))
 		table.SetHeaders([]string{"RAW OUTPUT"})
 
 		count := 0
@@ -144,7 +141,7 @@ var netTraceCmd = &cobra.Command{
 			}
 		}
 		table.SetFooter(fmt.Sprintf("Lines: %d", count))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -166,7 +163,7 @@ var netDigCmd = &cobra.Command{
 
 		lines := strings.Split(res, "\n")
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - DNS LOOKUP: %s", args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: DNS LOOKUP › %s", args[0]))
 		table.SetHeaders([]string{"DNS RECORDS"})
 
 		for _, line := range lines {
@@ -174,7 +171,7 @@ var netDigCmd = &cobra.Command{
 				table.AddRow([]string{line})
 			}
 		}
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -196,7 +193,7 @@ var netNmapCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - PORT SCAN: %s", args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: PORT SCAN › %s", args[0]))
 		table.SetHeaders([]string{"PORT", "PROTO", "STATE", "SERVICE"})
 
 		for _, r := range results {
@@ -209,7 +206,7 @@ var netNmapCmd = &cobra.Command{
 		}
 
 		table.SetFooter(fmt.Sprintf("Open ports: %d", len(results)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -235,7 +232,7 @@ var netTcpdumpCmd = &cobra.Command{
 
 		lines := strings.Split(res, "\n")
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - PACKET CAPTURE: %s", args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: PACKET CAPTURE › %s", args[0]))
 		table.SetHeaders([]string{"PACKETS"})
 
 		count := 0
@@ -249,7 +246,7 @@ var netTcpdumpCmd = &cobra.Command{
 			}
 		}
 		table.SetFooter(fmt.Sprintf("Packets captured: %d", count))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

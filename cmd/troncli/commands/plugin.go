@@ -10,7 +10,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/plugin"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +34,7 @@ var pluginListCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - PLUGINS INSTALADOS")
+		table.SetTitle("TRONCLI: PLUGINS")
 		table.SetHeaders([]string{"NAME", "VERSION", "DESCRIPTION"})
 
 		for _, p := range plugins {
@@ -45,7 +45,7 @@ var pluginListCmd = &cobra.Command{
 			table.AddRow([]string{p.Name, p.Version, desc})
 		}
 		table.SetFooter(fmt.Sprintf("Total plugins: %d", len(plugins)))
-		table.Render()
+		table.RenderBox()
 
 		return nil
 	},

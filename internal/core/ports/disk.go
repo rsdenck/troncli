@@ -18,6 +18,15 @@ type FilesystemUsage struct {
 	Files     uint64 // Inodes
 	FilesFree uint64
 }
+// MountPoint represents a filesystem mount
+type MountPoint struct {
+	Device     string
+	MountPoint string
+	FSType     string
+	Options    string
+}
+
+
 
 // DiskManager defines operations for storage management
 type DiskManager interface {

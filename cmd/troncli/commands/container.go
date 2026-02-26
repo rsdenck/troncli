@@ -9,7 +9,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/container"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,7 @@ var containerListCmd = &cobra.Command{
 		}
 		
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - LISTAGEM DE CONTAINERS")
+		table.SetTitle("TRONCLI: CONTAINERS")
 		table.SetHeaders([]string{"ID", "IMAGE", "STATE", "STATUS", "RUNTIME"})
 		
 		for _, c := range containers {
@@ -54,7 +54,7 @@ var containerListCmd = &cobra.Command{
 		}
 		
 		table.SetFooter(fmt.Sprintf("Total containers: %d", len(containers)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

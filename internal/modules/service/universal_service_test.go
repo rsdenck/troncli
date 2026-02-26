@@ -7,6 +7,7 @@ import (
 
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/domain"
+	"github.com/mascli/troncli/internal/policy"
 )
 
 // MockExecutor implements adapter.Executor for testing
@@ -25,10 +26,18 @@ func (m *MockExecutor) ExecWithInput(ctx context.Context, input string, command 
 	return m.Exec(ctx, command, args...)
 }
 
+// createMockPolicyEngine creates a policy engine with checks disabled for testing
+func createMockPolicyEngine() *policy.PolicyEngine {
+	pe := policy.NewPolicyEngine()
+	pe.Enabled = false // Disable policy checks for tests
+	return pe
+}
+
 func TestListSystemdServices_JSON(t *testing.T) {
 	mockExec := &MockExecutor{}
 	profile := &domain.SystemProfile{Distro: "ubuntu", InitSystem: "systemd"}
-	manager := NewUniversalServiceManager(mockExec, profile)
+	policyEngine := createMockPolicyEngine()
+	manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 	// Mock JSON output from systemctl
 	jsonOutput := `[
@@ -71,7 +80,8 @@ func TestListSystemdServices_JSON(t *testing.T) {
 func TestListSystemdServices_TextFallback(t *testing.T) {
 	mockExec := &MockExecutor{}
 	profile := &domain.SystemProfile{Distro: "ubuntu", InitSystem: "systemd"}
-	manager := NewUniversalServiceManager(mockExec, profile)
+	policyEngine := createMockPolicyEngine()
+	manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 	mockExec.ExecFunc = func(ctx context.Context, command string, args ...string) (*adapter.CommandResult, error) {
 		// Check if it's JSON request
@@ -122,7 +132,8 @@ nginx.service   loaded active exited  A high performance web server`
 func TestServiceOperations_Systemd(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "ubuntu", InitSystem: "systemd"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 tests := []struct {
 name      string
@@ -165,7 +176,8 @@ t.Errorf("%s failed: %v", tt.name, err)
 func TestGetServiceStatus_Systemd(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "ubuntu", InitSystem: "systemd"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 expectedOutput := "Active: active (running)"
 mockExec.ExecFunc = func(ctx context.Context, command string, args ...string) (*adapter.CommandResult, error) {
@@ -187,7 +199,8 @@ t.Errorf("Expected status %s, got %s", expectedOutput, status)
 func TestGetServiceLogs_Systemd(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "ubuntu", InitSystem: "systemd"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 expectedOutput := "Feb 17 10:00:00 server nginx[123]: Started nginx"
 mockExec.ExecFunc = func(ctx context.Context, command string, args ...string) (*adapter.CommandResult, error) {
@@ -210,7 +223,8 @@ t.Errorf("Expected logs %s, got %s", expectedOutput, logs)
 func TestListServices_Sysvinit(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "debian", InitSystem: "sysvinit"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 output := ` [ + ]  nginx
  [ - ]  apache2
@@ -246,7 +260,8 @@ t.Errorf("Service 2 mismatch")
 func TestServiceOperations_Sysvinit(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "debian", InitSystem: "sysvinit"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 tests := []struct {
 name      string
@@ -280,7 +295,8 @@ t.Errorf("%s failed: %v", tt.name, err)
 func TestListServices_OpenRC(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "alpine", InitSystem: "openrc"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 mockExec.ExecFunc = func(ctx context.Context, command string, args ...string) (*adapter.CommandResult, error) {
 if command != "rc-status" || args[0] != "--all" {
@@ -301,7 +317,8 @@ t.Errorf("Expected 0 services (stub), got %d", len(services))
 func TestServiceOperations_OpenRC(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "alpine", InitSystem: "openrc"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 tests := []struct {
 name      string
@@ -336,7 +353,8 @@ t.Errorf("%s failed: %v", tt.name, err)
 func TestServiceOperations_Runit(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "void", InitSystem: "runit"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 tests := []struct {
 name      string
@@ -368,7 +386,8 @@ t.Errorf("%s failed: %v", tt.name, err)
 func TestServiceOperations_Unsupported(t *testing.T) {
 mockExec := &MockExecutor{}
 profile := &domain.SystemProfile{Distro: "unknown", InitSystem: "unknown"}
-manager := NewUniversalServiceManager(mockExec, profile)
+policyEngine := createMockPolicyEngine()
+manager := NewUniversalServiceManager(mockExec, profile, policyEngine)
 
 if _, err := manager.ListServices(); err == nil {
 t.Error("Expected error for ListServices with unsupported init system")

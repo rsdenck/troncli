@@ -66,6 +66,57 @@ func (e *ProfileEngine) detectDistro(ctx context.Context, p *domain.SystemProfil
 				p.Version = strings.Trim(strings.TrimPrefix(line, "VERSION_ID="), "\"")
 			}
 		}
+		// If we found a distro, return
+		if p.Distro != "" {
+			return
+		}
+	}
+
+	// Fallback: Try distribution-specific files
+	// Gentoo
+	if data, err := os.ReadFile("/etc/gentoo-release"); err == nil {
+		p.Distro = "gentoo"
+		// Parse version from "Gentoo Base System release 2.14"
+		content := string(data)
+		if strings.Contains(content, "release") {
+			parts := strings.Fields(content)
+			for i, part := range parts {
+				if part == "release" && i+1 < len(parts) {
+					p.Version = parts[i+1]
+					break
+				}
+			}
+		}
+		return
+	}
+
+	// Void Linux
+	if _, err := os.Stat("/etc/void-release"); err == nil {
+		p.Distro = "void"
+		// Void doesn't have a version number in the traditional sense
+		p.Version = "rolling"
+		return
+	}
+
+	// Debian
+	if data, err := os.ReadFile("/etc/debian_version"); err == nil {
+		p.Distro = "debian"
+		p.Version = strings.TrimSpace(string(data))
+		return
+	}
+
+	// Arch
+	if _, err := os.Stat("/etc/arch-release"); err == nil {
+		p.Distro = "arch"
+		p.Version = "rolling"
+		return
+	}
+
+	// Alpine
+	if data, err := os.ReadFile("/etc/alpine-release"); err == nil {
+		p.Distro = "alpine"
+		p.Version = strings.TrimSpace(string(data))
+		return
 	}
 }
 
@@ -95,11 +146,19 @@ func (e *ProfileEngine) detectInitSystem(ctx context.Context, p *domain.SystemPr
 }
 
 func (e *ProfileEngine) detectPackageManager(p *domain.SystemProfile) {
-	managers := []string{"apt", "dnf", "yum", "pacman", "zypper", "apk"}
+	managers := []string{"apt", "dnf", "yum", "pacman", "zypper", "apk", "emerge", "xbps-install"}
 	for _, mgr := range managers {
 		_, err := exec.LookPath(mgr)
 		if err == nil {
-			p.PackageManager = mgr
+			// Map binary names to package manager names
+			switch mgr {
+			case "emerge":
+				p.PackageManager = "portage"
+			case "xbps-install":
+				p.PackageManager = "xbps"
+			default:
+				p.PackageManager = mgr
+			}
 			return
 		}
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/disk"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ var diskUsageCmd = &cobra.Command{
 			}
 
 			table := console.NewBoxTable(os.Stdout)
-			table.SetTitle("TRONCLI - USO DE DISCO (DEVICES)")
+			table.SetTitle("TRONCLI: DISK USAGE › DEVICES")
 			table.SetHeaders([]string{"NAME", "SIZE", "TYPE", "MOUNTPOINT"})
 
 			var addDev func(d ports.BlockDevice, indent string)
@@ -52,7 +52,7 @@ var diskUsageCmd = &cobra.Command{
 			for _, d := range devices {
 				addDev(d, "")
 			}
-			table.Render()
+			table.RenderBox()
 		} else {
 			usage, err := manager.GetFilesystemUsage(args[0])
 			if err != nil {
@@ -61,8 +61,7 @@ var diskUsageCmd = &cobra.Command{
 			}
 
 			table := console.NewBoxTable(os.Stdout)
-			table.SetTitle(fmt.Sprintf("TRONCLI - USO DE DISCO: %s", args[0]))
-			table.SetHeaders([]string{"METRIC", "VALUE"})
+			table.SetTitle(fmt.Sprintf("TRONCLI: DISK USAGE › %s", args[0]))
 
 			table.AddRow([]string{"Path", usage.Path})
 			table.AddRow([]string{"Total", fmt.Sprintf("%d bytes", usage.Total)})
@@ -70,7 +69,7 @@ var diskUsageCmd = &cobra.Command{
 			table.AddRow([]string{"Free", fmt.Sprintf("%d bytes", usage.Free)})
 			table.AddRow([]string{"Inodes", fmt.Sprintf("%d (Free: %d)", usage.Files, usage.FilesFree)})
 
-			table.Render()
+			table.RenderKeyValue()
 		}
 	},
 }
@@ -118,10 +117,9 @@ var diskHealthCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - SAÚDE DO DISCO")
-		table.SetHeaders([]string{"STATUS", "HEALTH"})
-		table.AddRow([]string{icon, status})
-		table.Render()
+		table.SetTitle("TRONCLI: DISK HEALTH")
+		table.AddRow([]string{"Status", icon + " " + status})
+		table.RenderKeyValue()
 	},
 }
 
@@ -155,7 +153,7 @@ var diskTopFilesCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - TOP %d ARQUIVOS: %s", count, path))
+		table.SetTitle(fmt.Sprintf("TRONCLI: TOP %d FILES › %s", count, path))
 		table.SetHeaders([]string{"SIZE", "PATH"})
 
 		for _, f := range files {
@@ -165,7 +163,7 @@ var diskTopFilesCmd = &cobra.Command{
 			}
 			table.AddRow([]string{formatBytes(f.Size), p})
 		}
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -194,12 +192,11 @@ var diskInodesCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - INODES: %s", path))
-		table.SetHeaders([]string{"METRIC", "VALUE"})
+		table.SetTitle(fmt.Sprintf("TRONCLI: INODES › %s", path))
 		table.AddRow([]string{"Used", fmt.Sprintf("%d", used)})
 		table.AddRow([]string{"Total", fmt.Sprintf("%d", total)})
 		table.AddRow([]string{"Usage %", fmt.Sprintf("%.2f%%", percent)})
-		table.Render()
+		table.RenderKeyValue()
 	},
 }
 

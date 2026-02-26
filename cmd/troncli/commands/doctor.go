@@ -8,7 +8,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/doctor"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -31,21 +31,21 @@ var doctorCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - DIAGNÓSTICO DO SISTEMA (DOCTOR)")
+		table.SetTitle("TRONCLI: SYSTEM HEALTH › DOCTOR")
 		table.SetHeaders([]string{"STATUS", "CHECK", "VALUE", "MESSAGE"})
 
 		for _, check := range checks {
-			statusIcon := "[OK]"
+			statusIcon := "✅"
 			if check.Status == ports.StatusWarning {
-				statusIcon = "[WARN]"
+				statusIcon = "⚠️"
 			} else if check.Status == ports.StatusCritical {
-				statusIcon = "[FAIL]"
+				statusIcon = "❌"
 			}
 
 			table.AddRow([]string{statusIcon, check.Name, check.Value, check.Message})
 		}
 		table.SetFooter(fmt.Sprintf("Total checks: %d", len(checks)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

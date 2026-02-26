@@ -7,7 +7,8 @@ import (
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/pkg"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/policy"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,10 @@ func getPkgManager() (*pkg.UniversalPackageManager, error) {
 		return nil, fmt.Errorf("failed to detect system profile: %w", err)
 	}
 
-	return pkg.NewUniversalPackageManager(executor, profile), nil
+	// Initialize policy engine
+	policyEngine := policy.NewPolicyEngine()
+
+	return pkg.NewUniversalPackageManager(executor, profile, policyEngine), nil
 }
 
 var pkgInstallCmd = &cobra.Command{
@@ -106,7 +110,7 @@ var pkgSearchCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - PESQUISA DE PACOTES: %s", args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: PACKAGE SEARCH › %s", args[0]))
 		table.SetHeaders([]string{"NAME", "VERSION", "MANAGER", "INSTALLED", "DESCRIPTION"})
 
 		for _, res := range results {
@@ -121,7 +125,7 @@ var pkgSearchCmd = &cobra.Command{
 			table.AddRow([]string{res.Name, res.Version, res.Manager, installed, desc})
 		}
 		table.SetFooter(fmt.Sprintf("Results found: %d", len(results)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

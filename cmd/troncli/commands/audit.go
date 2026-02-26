@@ -9,7 +9,7 @@ import (
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/audit"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,7 @@ var auditLoginsCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - HISTÓRICO DE LOGINS (24H)")
+		table.SetTitle("TRONCLI: LOGIN HISTORY › 24H")
 		table.SetHeaders([]string{"USER", "IP", "MESSAGE"})
 
 		for _, e := range events {
@@ -49,7 +49,7 @@ var auditLoginsCmd = &cobra.Command{
 			table.AddRow([]string{e.User, e.IP, msg})
 		}
 		table.SetFooter(fmt.Sprintf("Total logins: %d", len(events)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -70,14 +70,14 @@ var auditSudoersCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - USUÁRIOS PRIVILEGIADOS (SUDO/WHEEL/ROOT)")
+		table.SetTitle("TRONCLI: PRIVILEGED USERS › SUDO/WHEEL/ROOT")
 		table.SetHeaders([]string{"USERNAME"})
 
 		for _, u := range users {
 			table.AddRow([]string{u})
 		}
 		table.SetFooter(fmt.Sprintf("Total privileged users: %d", len(users)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -109,7 +109,7 @@ var auditFileChangesCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - ALTERAÇÕES EM ARQUIVOS (24H)")
+		table.SetTitle("TRONCLI: FILE CHANGES › 24H")
 		table.SetHeaders([]string{"SEVERITY", "MESSAGE"})
 
 		for _, e := range events {
@@ -120,7 +120,7 @@ var auditFileChangesCmd = &cobra.Command{
 			table.AddRow([]string{e.Severity, msg})
 		}
 		table.SetFooter(fmt.Sprintf("Total events: %d", len(events)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -141,7 +141,7 @@ var auditCommandsCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - HISTÓRICO DE COMANDOS (SUDO/LOGS)")
+		table.SetTitle("TRONCLI: COMMAND HISTORY › SUDO/LOGS")
 		table.SetHeaders([]string{"USER", "COMMAND"})
 
 		for _, e := range events {
@@ -152,7 +152,7 @@ var auditCommandsCmd = &cobra.Command{
 			table.AddRow([]string{e.User, cmd})
 		}
 		table.SetFooter(fmt.Sprintf("Total commands: %d", len(events)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 

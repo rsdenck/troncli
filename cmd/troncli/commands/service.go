@@ -6,11 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mascli/troncli/internal/console"
 	"github.com/mascli/troncli/internal/core/adapter"
 	"github.com/mascli/troncli/internal/core/ports"
 	"github.com/mascli/troncli/internal/core/services"
 	"github.com/mascli/troncli/internal/modules/service"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/policy"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +38,7 @@ var serviceListCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - LISTAGEM DE SERVIÇOS")
+		table.SetTitle("TRONCLI: SERVICES")
 		table.SetHeaders([]string{"UNIT", "LOAD", "ACTIVE", "DESCRIPTION"})
 
 		for _, u := range units {
@@ -50,7 +51,7 @@ var serviceListCmd = &cobra.Command{
 		}
 
 		table.SetFooter(fmt.Sprintf("Total services: %d", len(units)))
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -121,7 +122,7 @@ var serviceStatusCmd = &cobra.Command{
 		status, err := manager.GetServiceStatus(args[0])
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - STATUS DO SERVIÇO: %s", args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: SERVICE STATUS › %s", args[0]))
 		table.SetHeaders([]string{"STATUS OUTPUT"})
 
 		if status != "" {
@@ -134,7 +135,7 @@ var serviceStatusCmd = &cobra.Command{
 					table.AddRow([]string{line})
 				}
 			}
-			table.Render()
+			table.RenderBox()
 		} else if err != nil {
 			fmt.Printf("Error getting status: %v\n", err)
 		}
@@ -165,7 +166,7 @@ var serviceLogsCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("TRONCLI - LOGS DO SERVIÇO: %s", args[0]))
+		table.SetTitle(fmt.Sprintf("TRONCLI: SERVICE LOGS › %s", args[0]))
 		table.SetHeaders([]string{"LOG ENTRY"})
 
 		logLines := strings.Split(logs, "\n")
@@ -177,7 +178,7 @@ var serviceLogsCmd = &cobra.Command{
 				table.AddRow([]string{line})
 			}
 		}
-		table.Render()
+		table.RenderBox()
 	},
 }
 
@@ -238,5 +239,9 @@ func getServiceManager() (ports.ServiceManager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect system profile: %w", err)
 	}
-	return service.NewUniversalServiceManager(executor, profile), nil
+
+	// Initialize policy engine
+	policyEngine := policy.NewPolicyEngine()
+
+	return service.NewUniversalServiceManager(executor, profile, policyEngine), nil
 }
