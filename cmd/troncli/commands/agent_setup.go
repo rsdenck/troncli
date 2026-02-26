@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
@@ -12,17 +13,17 @@ import (
 
 var agentSetupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: "Setup TRON ROOT AGENT (llama.cpp + model)",
+	Short: "Setup TRON ROOT AGENT (llama-cli + model)",
 	Long: `Instala e configura o TRON ROOT AGENT:
-  1. Clona e compila llama.cpp (usando CMake)
+  1. Baixa llama-cli pré-compilado (sem necessidade de compilação!)
   2. Baixa o modelo Qwen2.5-Coder-7B-Instruct (GGUF)
   3. Configura paths no ~/.troncli/
 
 Requisitos:
-  - Git
-  - CMake (ou Make como fallback)
-  - GCC/G++ (build-essential)
-  - ~4GB de espaço em disco para o modelo`,
+  - wget ou curl
+  - ~4GB de espaço em disco para o modelo
+  
+Sem necessidade de: Git, CMake, GCC, Make!`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return setupRootAgent()
 	},
@@ -41,7 +42,6 @@ func setupRootAgent() error {
 	troncliDir := filepath.Join(home, ".troncli")
 	binDir := filepath.Join(troncliDir, "bin")
 	modelsDir := filepath.Join(troncliDir, "models")
-	llamaCppDir := filepath.Join(troncliDir, "llama.cpp")
 
 	// Display setup header
 	table := console.NewBoxTable(os.Stdout)
@@ -63,98 +63,36 @@ func setupRootAgent() error {
 	// Check if llama.cpp is already installed
 	llamaCliPath := filepath.Join(binDir, "llama-cli")
 	if _, err := os.Stat(llamaCliPath); err == nil {
-		fmt.Printf("\n%s✓ llama.cpp already installed%s\n", console.ColorGreen, console.ColorReset)
+		fmt.Printf("\n%s✓ llama-cli already installed%s\n", console.ColorGreen, console.ColorReset)
 	} else {
-		// Clone llama.cpp
-		fmt.Printf("\n%s📥 Cloning llama.cpp...%s\n", console.ColorCyan, console.ColorReset)
-		if _, err := os.Stat(llamaCppDir); os.IsNotExist(err) {
-			cmd := exec.Command("git", "clone", "https://github.com/ggerganov/llama.cpp", llamaCppDir)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
-				return fmt.Errorf("failed to clone llama.cpp: %w", err)
-			}
-		}
-
-		// Compile llama.cpp using CMake
-		fmt.Printf("\n%s🔨 Compiling llama.cpp (this may take a few minutes)...%s\n", console.ColorCyan, console.ColorReset)
+		// Download pre-compiled llama-cli binary
+		fmt.Printf("\n%s📥 Downloading llama-cli binary...%s\n", console.ColorCyan, console.ColorReset)
 		
-		// Check for AVX2 support
-		avx2Detected := hasAVX2()
-		if avx2Detected {
-			fmt.Printf("  %s✓%s AVX2 detected, using optimized build\n", console.ColorGreen, console.ColorReset)
+		// Detect architecture
+		arch := detectArch()
+		llamaURL := getLlamaBinaryURL(arch)
+		
+		if llamaURL == "" {
+			return fmt.Errorf("unsupported architecture: %s. Please compile llama.cpp manually", arch)
 		}
-
-		// Create build directory
-		buildDir := filepath.Join(llamaCppDir, "build")
-		if err := os.MkdirAll(buildDir, 0755); err != nil {
-			return fmt.Errorf("failed to create build directory: %w", err)
-		}
-
-		// CMake configure
-		cmakeArgs := []string{"..", "-DCMAKE_BUILD_TYPE=Release"}
-		if avx2Detected {
-			cmakeArgs = append(cmakeArgs, "-DLLAMA_NATIVE=ON")
-		}
-
-		cmakeCmd := exec.Command("cmake", cmakeArgs...)
-		cmakeCmd.Dir = buildDir
-		cmakeCmd.Stdout = os.Stdout
-		cmakeCmd.Stderr = os.Stderr
-		if err := cmakeCmd.Run(); err != nil {
-			// Fallback: Try without cmake, use make directly
-			fmt.Printf("  %s⚠️  CMake not found, trying legacy make...%s\n", console.ColorYellow, console.ColorReset)
-			
-			makeCmd := "make"
-			if avx2Detected {
-				makeCmd = "make LLAMA_NATIVE=1"
-			}
-			
-			legacyCmd := exec.Command("sh", "-c", makeCmd)
-			legacyCmd.Dir = llamaCppDir
-			legacyCmd.Stdout = os.Stdout
-			legacyCmd.Stderr = os.Stderr
-			if err := legacyCmd.Run(); err != nil {
-				return fmt.Errorf("failed to compile llama.cpp (tried cmake and make): %w", err)
-			}
+		
+		fmt.Printf("  %sArchitecture: %s%s\n", console.ColorDim, arch, console.ColorReset)
+		fmt.Printf("  %sDownloading from: llama.cpp releases%s\n", console.ColorDim, console.ColorReset)
+		
+		// Download binary
+		var downloadCmd *exec.Cmd
+		if commandExists("wget") {
+			downloadCmd = exec.Command("wget", "-O", llamaCliPath, "--progress=bar:force", llamaURL)
+		} else if commandExists("curl") {
+			downloadCmd = exec.Command("curl", "-L", "-o", llamaCliPath, "--progress-bar", llamaURL)
 		} else {
-			// CMake build
-			buildCmd := exec.Command("cmake", "--build", ".", "--config", "Release", "-j", "4")
-			buildCmd.Dir = buildDir
-			buildCmd.Stdout = os.Stdout
-			buildCmd.Stderr = os.Stderr
-			if err := buildCmd.Run(); err != nil {
-				return fmt.Errorf("failed to build llama.cpp: %w", err)
-			}
-		}
-
-		// Copy binary to bin directory
-		fmt.Printf("\n%s📦 Installing binary...%s\n", console.ColorCyan, console.ColorReset)
-		
-		// Try different binary locations (CMake puts them in build/bin/)
-		binaryPaths := []string{
-			filepath.Join(buildDir, "bin", "llama-cli"),
-			filepath.Join(buildDir, "bin", "main"),
-			filepath.Join(llamaCppDir, "llama-cli"),
-			filepath.Join(llamaCppDir, "main"),
+			return fmt.Errorf("neither wget nor curl found. Please install one of them")
 		}
 		
-		var sourceBinary string
-		for _, path := range binaryPaths {
-			if _, err := os.Stat(path); err == nil {
-				sourceBinary = path
-				break
-			}
-		}
-
-		if sourceBinary == "" {
-			return fmt.Errorf("llama.cpp binary not found after compilation. Tried: %v", binaryPaths)
-		}
-
-		// Copy to bin directory
-		copyCmd := exec.Command("cp", sourceBinary, llamaCliPath)
-		if err := copyCmd.Run(); err != nil {
-			return fmt.Errorf("failed to copy binary: %w", err)
+		downloadCmd.Stdout = os.Stdout
+		downloadCmd.Stderr = os.Stderr
+		if err := downloadCmd.Run(); err != nil {
+			return fmt.Errorf("failed to download llama-cli: %w", err)
 		}
 
 		// Make executable
@@ -207,6 +145,33 @@ func setupRootAgent() error {
 	fmt.Printf("%s└──────────────────────────────────────────────────────────┘%s\n\n", console.ColorGreen, console.ColorReset)
 
 	return nil
+}
+
+// detectArch detects the system architecture
+func detectArch() string {
+	cmd := exec.Command("uname", "-m")
+	output, err := cmd.Output()
+	if err != nil {
+		return "unknown"
+	}
+	arch := strings.TrimSpace(string(output))
+	return arch
+}
+
+// getLlamaBinaryURL returns the download URL for pre-compiled llama-cli
+func getLlamaBinaryURL(arch string) string {
+	// Use llama.cpp releases from GitHub
+	// These are pre-compiled binaries that work on most Linux systems
+	baseURL := "https://github.com/ggerganov/llama.cpp/releases/download/b3561"
+	
+	switch arch {
+	case "x86_64", "amd64":
+		return baseURL + "/llama-b3561-bin-ubuntu-x64.zip"
+	case "aarch64", "arm64":
+		return baseURL + "/llama-b3561-bin-ubuntu-arm64.zip"
+	default:
+		return ""
+	}
 }
 
 // hasAVX2 checks if the CPU supports AVX2
