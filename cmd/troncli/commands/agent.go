@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/mascli/troncli/internal/agent"
-	"github.com/mascli/troncli/internal/ui/console"
+	"github.com/mascli/troncli/internal/console"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -51,8 +51,8 @@ var agentStatusCmd = &cobra.Command{
 		}
 
 		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("TRONCLI - AGENT STATUS")
-		table.SetHeaders([]string{"PROPERTY", "VALUE"})
+		table.SetTitle("TRONCLI: AGENT STATUS")
+
 		table.AddRow([]string{"Provider", config.Provider})
 		table.AddRow([]string{"Model", config.Model})
 
@@ -64,7 +64,7 @@ var agentStatusCmd = &cobra.Command{
 		}
 		table.AddRow([]string{"API Key", apiKeyStatus})
 
-		table.Render()
+		table.RenderKeyValue()
 		return nil
 	},
 }
@@ -107,6 +107,11 @@ func getAgentAdapter(config *AgentConfig) (agent.AgentAdapter, error) {
 	switch config.Provider {
 	case "ollama":
 		return agent.NewOllamaAdapter(config.Model, capabilitiesPath)
+	case "llamacpp":
+		// Default paths for llama.cpp integration
+		modelPath := filepath.Join(home, ".troncli", "models", "qwen2.5-coder-7b-instruct-q4_0.gguf")
+		llamaPath := filepath.Join(home, ".troncli", "bin", "llama-cli")
+		return agent.NewLlamaCppAdapter(modelPath, llamaPath, capabilitiesPath)
 	case "claude":
 		return agent.NewClaudeAdapter(config.APIKey, capabilitiesPath)
 	case "openai":
@@ -121,8 +126,14 @@ func getAgentAdapter(config *AgentConfig) (agent.AgentAdapter, error) {
 var agentCmd = &cobra.Command{
 	Use:   "agent [command] or [intent]",
 	Short: "Gerenciar e interagir com agentes de IA",
-	Long: `Comandos para configurar e utilizar agentes de IA (Ollama, Claude, OpenAI, Local).
-Você pode passar uma intenção diretamente: troncli agent "instalar nginx"`,
+	Long: `Comandos para configurar e utilizar agentes de IA (Ollama, Claude, OpenAI, Local, LlamaCpp).
+Você pode passar uma intenção diretamente: troncli agent "instalar nginx"
+
+TRON ROOT AGENT (llama.cpp):
+  O agente root é um agente autônomo hardcore que usa llama.cpp diretamente.
+  Ele analisa riscos, gera comandos troncli e executa com confirmação.
+  
+  Exemplo: troncli agent root "verificar saúde do sistema"`,
 	Args: cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -130,6 +141,16 @@ Você pode passar uma intenção diretamente: troncli agent "instalar nginx"`,
 			return nil
 		}
 
+		// Check if first arg is "root" for root agent
+		if args[0] == "root" {
+			if len(args) < 2 {
+				return fmt.Errorf("root agent requires an intent. Example: troncli agent root \"install nginx\"")
+			}
+			intent := strings.Join(args[1:], " ")
+			return executeRootAgent(intent)
+		}
+
+		// Regular agent execution
 		intent := strings.Join(args, " ")
 		config, err := loadAgentConfig()
 		if err != nil {
@@ -151,17 +172,50 @@ Você pode passar uma intenção diretamente: troncli agent "instalar nginx"`,
 	},
 }
 
+// executeRootAgent executes the TRON ROOT AGENT
+func executeRootAgent(intent string) error {
+	home, _ := os.UserHomeDir()
+	modelPath := filepath.Join(home, ".troncli", "models", "qwen2.5-coder-7b-instruct-q4_0.gguf")
+	llamaPath := filepath.Join(home, ".troncli", "bin", "llama-cli")
+
+	// Check for system-wide llama-cli
+	if _, err := os.Stat(llamaPath); os.IsNotExist(err) {
+		// Try system paths
+		systemPaths := []string{
+			"/usr/local/bin/llama-cli",
+			"/usr/bin/llama-cli",
+			"/opt/llama.cpp/llama-cli",
+		}
+		for _, path := range systemPaths {
+			if _, err := os.Stat(path); err == nil {
+				llamaPath = path
+				break
+			}
+		}
+	}
+
+	rootAgent := agent.NewRootAgent(modelPath, llamaPath)
+
+	// Use streaming for better UX
+	streaming, _ := os.LookupEnv("TRONCLI_AGENT_STREAMING")
+	if streaming == "true" {
+		return rootAgent.StreamingExecute(context.Background(), intent)
+	}
+
+	return rootAgent.Execute(context.Background(), intent)
+}
+
 var agentEnableCmd = &cobra.Command{
 	Use:   "enable [provider]",
-	Short: "Habilitar um provedor de agente (ollama, claude, openai, local)",
+	Short: "Habilitar um provedor de agente (ollama, llamacpp, claude, openai, local)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		provider := args[0]
 		validProviders := map[string]bool{
-			"ollama": true, "claude": true, "openai": true, "local": true,
+			"ollama": true, "llamacpp": true, "claude": true, "openai": true, "local": true,
 		}
 		if !validProviders[provider] {
-			return fmt.Errorf("provedor inválido '%s'. Opções: ollama, claude, openai, local", provider)
+			return fmt.Errorf("provedor inválido '%s'. Opções: ollama, llamacpp, claude, openai, local", provider)
 		}
 
 		config, err := loadAgentConfig()
