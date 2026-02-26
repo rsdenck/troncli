@@ -16,7 +16,7 @@ const (
 	ColorGreen   = "\033[92m"  // Bright green
 	ColorYellow  = "\033[93m"  // Bright yellow
 	ColorRed     = "\033[91m"  // Bright red
-	ColorBlue    = "\033[94m"  // Bright blue
+	ColorBlue    = "\033[94m"  // Bright blue for agent output
 	ColorMagenta = "\033[95m"  // Bright magenta
 	ColorWhite   = "\033[97m"  // Bright white
 	ColorGray    = "\033[90m"  // Dark gray

@@ -106,10 +106,10 @@ func (a *RootAgent) Execute(ctx context.Context, userIntent string) error {
 	prompt := a.BuildSystemPrompt(userIntent)
 
 	// Get LLM response
-	fmt.Printf("\n%s🧠 Analyzing intent...%s\n", console.ColorCyan, console.ColorReset)
+	fmt.Printf("\n%s🧠 Analisando intenção...%s\n", console.ColorBlue+console.ColorBold, console.ColorReset)
 	response, err := a.queryLLM(ctx, prompt)
 	if err != nil {
-		return fmt.Errorf("❌ LLM query failed: %w", err)
+		return fmt.Errorf("❌ Falha na consulta LLM: %w", err)
 	}
 
 	// Parse JSON response
@@ -205,24 +205,52 @@ func (a *RootAgent) extractJSON(response string) string {
 	return response
 }
 
-// displayHeader shows the agent header
+// displayHeader shows the agent header in BLUE
 func (a *RootAgent) displayHeader(intent string) {
-	table := console.NewBoxTable(os.Stdout)
-	table.SetTitle("TRON ROOT AGENT › AUTONOMOUS MODE")
-	table.AddRow([]string{"Intent", intent})
-	table.AddRow([]string{"Model", "Qwen2.5-Coder-7B"})
-	table.AddRow([]string{"Engine", "llama.cpp"})
-	table.AddRow([]string{"Mode", "Hardcore Linux"})
-	table.RenderKeyValue()
+	fmt.Printf("\n%s┌── TRON ROOT AGENT › MODO AUTÔNOMO ───────────────────────┐%s\n", console.ColorBlue, console.ColorReset)
+	fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+	
+	// Intent
+	intentLines := wrapText(intent, 50)
+	for _, line := range intentLines {
+		padding := 50 - len(line)
+		if padding < 0 {
+			padding = 0
+		}
+		fmt.Printf("%s│%s  Intenção › %s%s%s%s  %s│%s\n",
+			console.ColorBlue, console.ColorReset,
+			console.ColorBlue+console.ColorBold, line, console.ColorReset,
+			strings.Repeat(" ", padding), console.ColorBlue, console.ColorReset)
+	}
+	
+	fmt.Printf("%s│%s  Modelo   › Qwen2.5-Coder-7B                              %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+	fmt.Printf("%s│%s  Engine   › llama.cpp                                     %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+	fmt.Printf("%s│%s  Modo     › Hardcore Linux                                %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+	fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+	fmt.Printf("%s└──────────────────────────────────────────────────────────┘%s\n", console.ColorBlue, console.ColorReset)
 }
 
-// displayAnalysis shows the agent's analysis
+// displayAnalysis shows the agent's analysis with BLUE output
 func (a *RootAgent) displayAnalysis(resp *AgentResponse) {
-	fmt.Printf("\n%s┌── AGENT ANALYSIS ────────────────────────────────────────┐%s\n", console.ColorCyan, console.ColorReset)
-	fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorCyan, console.ColorReset, console.ColorCyan, console.ColorReset)
-	fmt.Printf("%s│%s  %s%s%s\n", console.ColorCyan, console.ColorReset, resp.Analysis, strings.Repeat(" ", 56-len(resp.Analysis)), console.ColorCyan+"│"+console.ColorReset)
-	fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorCyan, console.ColorReset, console.ColorCyan, console.ColorReset)
-	fmt.Printf("%s└──────────────────────────────────────────────────────────┘%s\n", console.ColorCyan, console.ColorReset)
+	// Analysis in BLUE
+	fmt.Printf("\n%s┌── ANÁLISE DO AGENTE ─────────────────────────────────────┐%s\n", console.ColorBlue, console.ColorReset)
+	fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+	
+	// Wrap text to fit in box
+	analysisLines := wrapText(resp.Analysis, 56)
+	for _, line := range analysisLines {
+		padding := 56 - len(line)
+		if padding < 0 {
+			padding = 0
+		}
+		fmt.Printf("%s│%s  %s%s%s  %s│%s\n", 
+			console.ColorBlue, console.ColorReset, 
+			console.ColorBlue, line, console.ColorReset,
+			strings.Repeat(" ", padding), console.ColorBlue, console.ColorReset)
+	}
+	
+	fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+	fmt.Printf("%s└──────────────────────────────────────────────────────────┘%s\n", console.ColorBlue, console.ColorReset)
 
 	// Risk level with color
 	riskColor := console.ColorGreen
@@ -236,34 +264,68 @@ func (a *RootAgent) displayAnalysis(resp *AgentResponse) {
 	}
 
 	table := console.NewBoxTable(os.Stdout)
-	table.SetTitle("RISK ASSESSMENT")
-	table.AddRow([]string{"Risk Level", fmt.Sprintf("%s%s%s", riskColor, strings.ToUpper(resp.Risk), console.ColorReset)})
-	table.AddRow([]string{"Impact", resp.Impact})
-	table.AddRow([]string{"Confirmation", fmt.Sprintf("%v", resp.ConfirmationRequired)})
+	table.SetTitle("AVALIAÇÃO DE RISCO")
+	table.AddRow([]string{"Nível de Risco", fmt.Sprintf("%s%s%s", riskColor, strings.ToUpper(resp.Risk), console.ColorReset)})
+	table.AddRow([]string{"Impacto", resp.Impact})
+	table.AddRow([]string{"Confirmação", fmt.Sprintf("%v", resp.ConfirmationRequired)})
 	table.RenderKeyValue()
 
-	// Commands
+	// Commands in BLUE
 	if len(resp.Commands) > 0 {
-		fmt.Printf("\n%s┌── COMMANDS TO EXECUTE ───────────────────────────────────┐%s\n", console.ColorCyan, console.ColorReset)
-		fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorCyan, console.ColorReset, console.ColorCyan, console.ColorReset)
+		fmt.Printf("\n%s┌── COMANDOS A EXECUTAR ───────────────────────────────────┐%s\n", console.ColorBlue, console.ColorReset)
+		fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
 		for i, cmd := range resp.Commands {
 			padding := 54 - len(cmd)
 			if padding < 0 {
 				padding = 0
 			}
 			fmt.Printf("%s│%s  %d. %s%s%s  %s│%s\n", 
-				console.ColorCyan, console.ColorReset, i+1, 
-				console.ColorGreen, cmd, console.ColorReset,
-				strings.Repeat(" ", padding), console.ColorCyan+"│"+console.ColorReset)
+				console.ColorBlue, console.ColorReset, i+1, 
+				console.ColorBlue+console.ColorBold, cmd, console.ColorReset,
+				strings.Repeat(" ", padding), console.ColorBlue+"│"+console.ColorReset)
 		}
-		fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorCyan, console.ColorReset, console.ColorCyan, console.ColorReset)
-		fmt.Printf("%s└──────────────────────────────────────────────────────────┘%s\n\n", console.ColorCyan, console.ColorReset)
+		fmt.Printf("%s│%s                                                          %s│%s\n", console.ColorBlue, console.ColorReset, console.ColorBlue, console.ColorReset)
+		fmt.Printf("%s└──────────────────────────────────────────────────────────┘%s\n\n", console.ColorBlue, console.ColorReset)
 	}
 
-	// Reasoning
+	// Reasoning in BLUE
 	if resp.Reasoning != "" {
-		fmt.Printf("%s💡 Reasoning:%s %s\n\n", console.ColorCyan, console.ColorReset, resp.Reasoning)
+		fmt.Printf("%s💡 Raciocínio:%s %s%s%s\n\n", 
+			console.ColorBlue+console.ColorBold, console.ColorReset,
+			console.ColorBlue, resp.Reasoning, console.ColorReset)
 	}
+}
+
+// wrapText wraps text to fit within specified width
+func wrapText(text string, width int) []string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	var lines []string
+	currentLine := ""
+
+	for _, word := range words {
+		if len(currentLine)+len(word)+1 <= width {
+			if currentLine == "" {
+				currentLine = word
+			} else {
+				currentLine += " " + word
+			}
+		} else {
+			if currentLine != "" {
+				lines = append(lines, currentLine)
+			}
+			currentLine = word
+		}
+	}
+
+	if currentLine != "" {
+		lines = append(lines, currentLine)
+	}
+
+	return lines
 }
 
 // requestConfirmation asks the user for confirmation
@@ -280,14 +342,14 @@ func (a *RootAgent) requestConfirmation(resp *AgentResponse) bool {
 	return response == "yes" || response == "y"
 }
 
-// executeCommands executes the commands from the agent response
+// executeCommands executes the commands from the agent response in BLUE
 func (a *RootAgent) executeCommands(ctx context.Context, resp *AgentResponse) error {
-	fmt.Printf("%s🚀 Executing commands...%s\n\n", console.ColorGreen+console.ColorBold, console.ColorReset)
+	fmt.Printf("%s🚀 Executando comandos...%s\n\n", console.ColorBlue+console.ColorBold, console.ColorReset)
 
 	for i, command := range resp.Commands {
-		fmt.Printf("%s[%d/%d]%s Executing: %s%s%s\n", 
-			console.ColorCyan, i+1, len(resp.Commands), console.ColorReset,
-			console.ColorGreen, command, console.ColorReset)
+		fmt.Printf("%s[%d/%d]%s Executando: %s%s%s\n", 
+			console.ColorBlue+console.ColorBold, i+1, len(resp.Commands), console.ColorReset,
+			console.ColorBlue, command, console.ColorReset)
 
 		// Execute with timeout
 		execCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
@@ -298,14 +360,14 @@ func (a *RootAgent) executeCommands(ctx context.Context, resp *AgentResponse) er
 		cmd.Stderr = os.Stderr
 
 		if err := cmd.Run(); err != nil {
-			fmt.Printf("%s❌ Command failed: %v%s\n", console.ColorRed, err, console.ColorReset)
-			return fmt.Errorf("command execution failed: %w", err)
+			fmt.Printf("%s❌ Comando falhou: %v%s\n", console.ColorRed, err, console.ColorReset)
+			return fmt.Errorf("falha na execução do comando: %w", err)
 		}
 
-		fmt.Printf("%s✅ Command completed successfully%s\n\n", console.ColorGreen, console.ColorReset)
+		fmt.Printf("%s✅ Comando executado com sucesso%s\n\n", console.ColorBlue, console.ColorReset)
 	}
 
-	fmt.Printf("%s🎉 All commands executed successfully!%s\n", console.ColorGreen+console.ColorBold, console.ColorReset)
+	fmt.Printf("%s🎉 Todos os comandos executados com sucesso!%s\n", console.ColorBlue+console.ColorBold, console.ColorReset)
 	return nil
 }
 
