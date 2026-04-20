@@ -3,7 +3,7 @@ module github.com/mascli/troncli
 go 1.24.0
 
 require (
-	github.com/gdamore/tcell/v2 v2.13.8
+	github.com/gdamore/tcell/v2 v2.13.9
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/rivo/tview v0.42.0
 	github.com/spf13/cobra v1.10.2
