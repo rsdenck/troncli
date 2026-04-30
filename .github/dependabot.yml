@@ -4,18 +4,17 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    groups:
-      dependencies:
-        patterns:
-          - "*"
-    open-pull-requests-limit: 10
-
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-    groups:
-      actions:
-        patterns:
-          - "*"
-    open-pull-requests-limit: 10
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
