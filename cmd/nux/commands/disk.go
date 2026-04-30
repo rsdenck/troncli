@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -19,12 +20,61 @@ var diskListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List disk devices",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Simple implementation - list block devices
-		output.NewList([]map[string]interface{}{
-			{"device": "/dev/nvme0n1", "size": "90G", "type": "nvme"},
-			{"device": "/dev/loop0", "size": "57M", "type": "loop"},
-			{"device": "/dev/loop1", "size": "200M", "type": "loop"},
-		}, 3).WithMessage("Disk devices").Print()
+		// Real implementation using lsblk
+		lsblkCmd := exec.Command("lsblk", "-J")
+		out, err := lsblkCmd.CombinedOutput()
+		
+		if err != nil {
+			output.NewError(fmt.Sprintf("failed to list disks: %s", strings.TrimSpace(string(out))), "DISK_LIST_ERROR").Print()
+			return
+		}
+		
+		// Parse JSON output
+		var result map[string]interface{}
+		if err := json.Unmarshal(out, &result); err != nil {
+			// Fallback to text parsing
+			output.NewError("lsblk JSON parsing failed", "DISK_LIST_PARSE_ERROR").Print()
+			return
+		}
+		
+		blockDevices, ok := result["blockdevices"].([]interface{})
+		if !ok {
+			output.NewError("no block devices found", "DISK_LIST_NO_DEVICES").Print()
+			return
+		}
+		
+		// Define headers exactly as output.md
+		headers := []string{"DEVICE", "SIZE", "TYPE", "MOUNTPOINT"}
+		rows := [][]string{}
+		
+		for _, dev := range blockDevices {
+			device, _ := dev.(map[string]interface{})
+			name, _ := device["name"].(string)
+			size, _ := device["size"].(string)
+			dtype, _ := device["type"].(string)
+			mountpoint, _ := device["mountpoint"].(string)
+			
+			// Add /dev/ prefix if not present
+			devicePath := "/dev/" + name
+			
+			rows = append(rows, []string{devicePath, size, dtype, mountpoint})
+			
+			// Also include children if any (partitions)
+			if children, ok := device["children"].([]interface{}); ok {
+				for _, child := range children {
+					childDev, _ := child.(map[string]interface{})
+					childName, _ := childDev["name"].(string)
+					childSize, _ := childDev["size"].(string)
+					childType, _ := childDev["type"].(string)
+					childMount, _ := childDev["mountpoint"].(string)
+					childPath := "/dev/" + childName
+					rows = append(rows, []string{childPath, childSize, childType, childMount})
+				}
+			}
+		}
+		
+		output.PrintTable(headers, rows)
+		fmt.Printf("\n%d devices found\n", len(rows))
 	},
 }
 

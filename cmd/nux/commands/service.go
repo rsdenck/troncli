@@ -16,34 +16,101 @@ var serviceCmd = &cobra.Command{
 	Long:  `Manage system services (systemd, openrc, sysvinit, runit).`,
 }
 
+// ServiceInfo represents a service entry matching output.md format
+type ServiceInfo struct {
+	Name    string
+	State   string
+	Enabled string
+	Pid     string
+	Ports   string
+}
+
 var serviceListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List services",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Use systemctl list-units for systemd
+		// Use systemctl to list services with proper parsing
 		systemctlCmd := exec.Command("systemctl", "list-units", "--type=service", "--all", "--no-pager")
 		out, err := systemctlCmd.CombinedOutput()
 		
 		if err != nil {
-			// Try service command for non-systemd
-			serviceCmd := exec.Command("service", "--status-all")
-			serviceOut, serviceErr := serviceCmd.CombinedOutput()
-			if serviceErr != nil {
-				output.NewError(fmt.Sprintf("failed to list services: %s", strings.TrimSpace(string(out))), "SERVICE_LIST_ERROR").Print()
-				return
-			}
-			output.NewSuccess(map[string]interface{}{
-				"output": strings.TrimSpace(string(serviceOut)),
-				"type":   "service_command",
-			}).Print()
+			output.NewError(fmt.Sprintf("failed to list services: %s", strings.TrimSpace(string(out))), "SERVICE_LIST_ERROR").Print()
 			return
 		}
 		
-		output.NewSuccess(map[string]interface{}{
-			"output": strings.TrimSpace(string(out)),
-			"type":   "systemctl",
-		}).Print()
+		services := parseServiceOutput(string(out))
+		
+		// Convert to items for output formatter
+		items := []map[string]interface{}{}
+		for _, s := range services {
+			items = append(items, map[string]interface{}{
+				"name":    s.Name,
+				"state":   s.State,
+				"enabled": s.Enabled,
+				"pid":     s.Pid,
+				"ports":   s.Ports,
+			})
+		}
+		
+		output.NewList(items, len(items)).WithMessage("Service list").Print()
 	},
+}
+
+func parseServiceOutput(out string) []ServiceInfo {
+	services := []ServiceInfo{}
+	lines := strings.Split(out, "\n")
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "UNIT") || strings.HasPrefix(line, "●") {
+			continue
+		}
+		
+		// Parse systemctl list-units output
+		// Format: UNIT LOAD ACTIVE SUB DESCRIPTION
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			continue
+		}
+		
+		name := strings.TrimSuffix(fields[0], ".service")
+		
+		// Get state (ACTIVE column)
+		state := fields[2]
+		if state == "active" {
+			state = "active"
+		} else if state == "inactive" || state == "dead" {
+			state = "inactive"
+		}
+		
+		// Check if enabled
+		enabled := "no"
+		if state == "active" {
+			enabled = "yes"
+		}
+		
+		// Try to get PID
+		pid := "-"
+		pidCmd := exec.Command("systemctl", "show", name, "--property=MainPID", "--value")
+		pidOut, _ := pidCmd.CombinedOutput()
+		pidStr := strings.TrimSpace(string(pidOut))
+		if pidStr != "" && pidStr != "0" {
+			pid = pidStr
+		}
+		
+		// Ports (simplified - would need ss/netstat for real implementation)
+		ports := "-"
+		
+		services = append(services, ServiceInfo{
+			Name:    name,
+			State:   state,
+			Enabled: enabled,
+			Pid:     pid,
+			Ports:   ports,
+		})
+	}
+	
+	return services
 }
 
 var serviceStatusCmd = &cobra.Command{
@@ -61,7 +128,7 @@ var serviceStatusCmd = &cobra.Command{
 		jsonOut, _ := jsonCmd.CombinedOutput()
 		
 		var jsonData interface{}
-		if err := json.Unmarshal(jsonOut, &jsonData); err == nil {
+		if jsonErr := json.Unmarshal(jsonOut, &jsonData); jsonErr == nil {
 			output.NewSuccess(jsonData).Print()
 			return
 		}

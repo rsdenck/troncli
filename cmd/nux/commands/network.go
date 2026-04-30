@@ -16,60 +16,144 @@ var networkCmd = &cobra.Command{
 	Long:  `Manage network configuration, interfaces, routes, and diagnostics.`,
 }
 
+type NetworkInterface struct {
+	Name    string
+	Type    string
+	State   string
+	Address string
+	Speed   string
+}
+
 var networkListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List network interfaces",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Use ip -j link show for JSON output
-		ipCmd := exec.Command("ip", "-j", "link", "show")
-		out, err := ipCmd.CombinedOutput()
-		
+		interfaces, err := getNetworkInterfaces()
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to list interfaces: %s", strings.TrimSpace(string(out))), "NETWORK_LIST_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to list interfaces: %s", err.Error()), "NETWORK_LIST_ERROR").Print()
 			return
 		}
-		
-		var interfaces []map[string]interface{}
-		if err := json.Unmarshal(out, &interfaces); err != nil {
-			// Fallback to text parsing if JSON fails
-			output.NewList([]map[string]interface{}{
-				{"output": strings.TrimSpace(string(out))},
-			}, 1).WithMessage("Network interfaces (text)").Print()
-			return
-		}
-		
-		// Get addresses for each interface
-		addrCmd := exec.Command("ip", "-j", "addr", "show")
-		addrOut, _ := addrCmd.CombinedOutput()
-		
-		var addresses []map[string]interface{}
-		json.Unmarshal(addrOut, &addresses)
-		
-		// Combine interface and address info
+
 		items := []map[string]interface{}{}
 		for _, iface := range interfaces {
-			item := map[string]interface{}{
-				"ifindex":  iface["ifindex"],
-				"ifname":   iface["ifname"],
-				"flags":    iface["flags"],
-				"mtu":      iface["mtu"],
-				"operstate": iface["operstate"],
-				"address":  iface["address"],
-			}
-			
-			// Find matching address
-			for _, addr := range addresses {
-				if addr["ifname"] == iface["ifname"] {
-					item["addr_info"] = addr["addr_info"]
-					break
-				}
-			}
-			
-			items = append(items, item)
+			items = append(items, map[string]interface{}{
+				"name":    iface.Name,
+				"type":    iface.Type,
+				"state":   iface.State,
+				"address": iface.Address,
+				"speed":   iface.Speed,
+			})
 		}
-		
+
 		output.NewList(items, len(items)).WithMessage("Network interfaces").Print()
 	},
+}
+
+func getNetworkInterfaces() ([]NetworkInterface, error) {
+	linkCmd := exec.Command("ip", "-j", "link", "show")
+	linkOut, err := linkCmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("ip link show failed: %s", string(linkOut))
+	}
+
+	addrCmd := exec.Command("ip", "-j", "addr", "show")
+	addrOut, err := addrCmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("ip addr show failed: %s", string(addrOut))
+	}
+
+	var linkData []map[string]interface{}
+	if err := json.Unmarshal(linkOut, &linkData); err != nil {
+		return nil, err
+	}
+
+	var addrData []map[string]interface{}
+	if err := json.Unmarshal(addrOut, &addrData); err != nil {
+		return nil, err
+	}
+
+	linkMap := make(map[string]map[string]interface{})
+	for _, link := range linkData {
+		if name, ok := link["ifname"].(string); ok {
+			linkMap[name] = link
+		}
+	}
+
+	result := []NetworkInterface{}
+
+	for _, addr := range addrData {
+		if name, ok := addr["ifname"].(string); ok {
+			linkInfo := linkMap[name]
+
+			ifType := "ethernet"
+			if name == "lo" {
+				ifType = "loopback"
+			} else if strings.HasPrefix(name, "br-") {
+				ifType = "bridge"
+			} else if strings.HasPrefix(name, "veth") {
+				ifType = "veth"
+			} else if strings.HasPrefix(name, "wg") {
+				ifType = "wireguard"
+			}
+
+			state := "unknown"
+			if linkInfo != nil {
+				if operstate, ok := linkInfo["operstate"].(string); ok {
+					state = operstate
+				}
+			}
+
+			var addresses []string
+			if addrInfo, ok := addr["addr_info"].([]interface{}); ok {
+				count := 0
+				for _, ai := range addrInfo {
+					if count >= 2 {
+						break
+					}
+					if addrMap, ok := ai.(map[string]interface{}); ok {
+						if family, ok := addrMap["family"].(string); ok && (family == "inet" || family == "inet6") {
+							if local, ok := addrMap["local"].(string); ok {
+								prefixLen := 0.0
+								if pl, ok := addrMap["prefixlen"].(float64); ok {
+									prefixLen = pl
+								}
+								addresses = append(addresses, fmt.Sprintf("%s/%v", local, prefixLen))
+								count++
+							}
+						}
+					}
+				}
+			}
+
+			speed := "-"
+			if state == "up" && name != "lo" && !strings.HasPrefix(name, "veth") && !strings.HasPrefix(name, "br-") {
+				speedCmd := exec.Command("ethtool", name)
+				speedOut, _ := speedCmd.CombinedOutput()
+				if strings.Contains(string(speedOut), "Speed:") {
+					lines := strings.Split(string(speedOut), "\n")
+					for _, line := range lines {
+						if strings.Contains(line, "Speed:") {
+							parts := strings.Fields(line)
+							if len(parts) >= 2 {
+								speed = strings.Trim(parts[1], ":")
+								break
+							}
+						}
+					}
+				}
+			}
+
+			result = append(result, NetworkInterface{
+				Name:    name,
+				Type:    ifType,
+				State:   state,
+				Address: strings.Join(addresses, ", "),
+				Speed:   speed,
+			})
+		}
+	}
+
+	return result, nil
 }
 
 var networkShowCmd = &cobra.Command{
@@ -81,24 +165,24 @@ var networkShowCmd = &cobra.Command{
 		if len(args) > 0 {
 			cmdArgs = append(cmdArgs, args[0])
 		}
-		
+
 		ipCmd := exec.Command("ip", cmdArgs...)
 		out, err := ipCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to show interface: %s", strings.TrimSpace(string(out))), "NETWORK_SHOW_ERROR").Print()
 			return
 		}
-		
+
 		var result interface{}
-		if err := json.Unmarshal(out, &result); err != nil {
-			output.NewSuccess(map[string]interface{}{
-				"output": strings.TrimSpace(string(out)),
-			}).Print()
+		if err := json.Unmarshal(out, &result); err == nil {
+			output.NewSuccess(result).Print()
 			return
 		}
-		
-		output.NewSuccess(result).Print()
+
+		output.NewSuccess(map[string]interface{}{
+			"output": strings.TrimSpace(string(out)),
+		}).Print()
 	},
 }
 
@@ -108,17 +192,17 @@ var networkSetCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		iface := args[0]
-		
+
 		ipAddr, _ := cmd.Flags().GetString("ip")
 		netmask, _ := cmd.Flags().GetString("netmask")
 		gateway, _ := cmd.Flags().GetString("gateway")
 		up, _ := cmd.Flags().GetBool("up")
 		down, _ := cmd.Flags().GetBool("down")
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		commands := []string{}
-		
+
 		if up {
 			commands = append(commands, fmt.Sprintf("ip link set %s up", iface))
 		}
@@ -135,7 +219,7 @@ var networkSetCmd = &cobra.Command{
 		if gateway != "" {
 			commands = append(commands, fmt.Sprintf("ip route add default via %s", gateway))
 		}
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"interface": iface,
@@ -144,18 +228,18 @@ var networkSetCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		for _, command := range commands {
 			parts := strings.Fields(command)
 			execCmd := exec.Command(parts[0], parts[1:]...)
 			out, err := execCmd.CombinedOutput()
-			
+
 			if err != nil {
 				output.NewError(fmt.Sprintf("command failed: %s - %s", command, strings.TrimSpace(string(out))), "NETWORK_SET_ERROR").Print()
 				return
 			}
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"interface": iface,
 			"status":    "configured",

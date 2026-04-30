@@ -3,7 +3,6 @@ package output
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -11,7 +10,6 @@ var jsonOutput bool
 
 func SetFormat(json bool, yaml bool) {
 	jsonOutput = json
-	// TODO: add YAML support
 }
 
 type Output struct {
@@ -27,6 +25,13 @@ type Output struct {
 func NewSuccess(data interface{}) *Output {
 	return &Output{
 		Status: "success",
+		Data:   data,
+	}
+}
+
+func NewInfo(data interface{}) *Output {
+	return &Output{
+		Status: "info",
 		Data:   data,
 	}
 }
@@ -58,46 +63,215 @@ func (o *Output) Print() {
 		fmt.Println(string(data))
 		return
 	}
-	
-	if o.Status == "success" {
-		if o.Message != "" {
-			fmt.Println(o.Message)
+
+	if o.Status == "error" {
+		fmt.Printf("✖ %s\n", o.Error)
+		return
+	}
+
+	if o.Status == "info" {
+		fmt.Printf("⚠ %s\n", o.Message)
+		if o.Data != nil {
+			printDataAsFormattedTable(o.Data)
 		}
-		if o.Items != nil {
-			switch items := o.Items.(type) {
-			case []map[string]interface{}:
-				for _, item := range items {
-					for k, v := range item {
-						fmt.Printf("%s: %v\n", k, v)
-					}
-					fmt.Println("---")
-				}
-			case []string:
-				for _, item := range items {
-					fmt.Println(item)
-				}
-			default:
-				if o.Data != nil {
-					data, _ := json.MarshalIndent(o.Data, "", "  ")
-					fmt.Println(string(data))
-				}
-			}
-		} else if o.Data != nil {
-			data, _ := json.MarshalIndent(o.Data, "", "  ")
-			fmt.Println(string(data))
-		}
-	} else {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", o.Error)
+		return
+	}
+
+	// Success output with formatted table
+	if o.Items != nil {
+		printItemsAsFormattedTable(o.Items, o.Total, o.Message)
+	} else if o.Data != nil {
+		printDataAsFormattedTable(o.Data)
 	}
 }
 
-// PrintTable prints a table in text format (for non-JSON output)
-func PrintTable(headers []string, rows [][]string) {
-	if len(headers) > 0 {
-		fmt.Println(strings.Join(headers, "\t"))
-		fmt.Println(strings.Repeat("-\t", len(headers)))
-		for _, row := range rows {
-			fmt.Println(strings.Join(row, "\t"))
+// printItemsAsFormattedTable prints items in the exact format from output.md
+func printItemsAsFormattedTable(items interface{}, total int, message string) {
+	// Convert to []map[string]interface{}
+	if slice, ok := items.([]map[string]interface{}); ok {
+		if len(slice) == 0 {
+			fmt.Println("No items found")
+			return
+		}
+
+		// Get headers from first item
+		headers := make([]string, 0)
+		for k := range slice[0] {
+			headers = append(headers, strings.ToUpper(k))
+		}
+
+		// Calculate column widths (minimum: header length + 2)
+		widths := make([]int, len(headers))
+		for i, h := range headers {
+			widths[i] = len(h) + 2
+		}
+
+		// Adjust widths based on data
+		for _, item := range slice {
+			keys := getKeys(item)
+			for j, k := range keys {
+				val := fmt.Sprintf("%v", item[k])
+				if len(val)+2 > widths[j] {
+					widths[j] = len(val) + 2
+				}
+			}
+		}
+
+		// Print header with message
+		if message != "" {
+			fmt.Printf("\n%s\n", message)
+		}
+
+		// Print top border
+		printTopBorder(widths)
+
+		// Print header row
+		printRow(headers, widths)
+
+		// Print separator
+		printSeparator(widths)
+
+		// Print rows
+		for _, item := range slice {
+			keys := getKeys(item)
+			values := make([]string, len(keys))
+			for j, k := range keys {
+				values[j] = fmt.Sprintf("%v", item[k])
+			}
+			printRow(values, widths)
+		}
+
+		// Print bottom border
+		printBottomBorder(widths)
+
+		fmt.Printf("\n%d items found\n", total)
+	}
+}
+
+// printDataAsFormattedTable prints a map as a simple key-value table
+func printDataAsFormattedTable(data interface{}) {
+	if m, ok := data.(map[string]interface{}); ok {
+		headers := []string{"KEY", "VALUE"}
+		widths := []int{20, 40}
+
+		printTopBorder(widths)
+		printRow(headers, widths)
+		printSeparator(widths)
+
+		for k, v := range m {
+			printRow([]string{k, fmt.Sprintf("%v", v)}, widths)
+		}
+
+		printBottomBorder(widths)
+	} else {
+		// Fallback to JSON
+		d, _ := json.MarshalIndent(data, "", "  ")
+		fmt.Println(string(d))
+	}
+}
+
+func printTopBorder(widths []int) {
+	fmt.Print("┌")
+	for i, w := range widths {
+		fmt.Print(strings.Repeat("─", w))
+		if i < len(widths)-1 {
+			fmt.Print("┬")
 		}
 	}
+	fmt.Println("┐")
+}
+
+func printSeparator(widths []int) {
+	fmt.Print("├")
+	for i, w := range widths {
+		fmt.Print(strings.Repeat("─", w))
+		if i < len(widths)-1 {
+			fmt.Print("┼")
+		}
+	}
+	fmt.Println("┤")
+}
+
+func printBottomBorder(widths []int) {
+	fmt.Print("└")
+	for i, w := range widths {
+		fmt.Print(strings.Repeat("─", w))
+		if i < len(widths)-1 {
+			fmt.Print("┴")
+		}
+	}
+	fmt.Println("┘")
+}
+
+func printRow(values []string, widths []int) {
+	fmt.Print("│")
+	for i, v := range values {
+		fmt.Printf(" %-*s ", widths[i]-2, truncate(v, widths[i]-2))
+		fmt.Print("│")
+	}
+	fmt.Println()
+}
+
+func truncate(s string, max int) string {
+	if len(s) > max {
+		if max > 3 {
+			return s[:max-3] + "..."
+		}
+		return s[:max]
+	}
+	return s
+}
+
+func getKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// PrintTable is a simple helper for non-JSON table output
+func PrintTable(headers []string, rows [][]string) {
+	if len(rows) == 0 {
+		return
+	}
+
+	// Calculate widths
+	widths := make([]int, len(headers))
+	for i, h := range headers {
+		widths[i] = len(h) + 2
+	}
+
+	for _, row := range rows {
+		for i, cell := range row {
+			if len(cell)+2 > widths[i] {
+				widths[i] = len(cell) + 2
+			}
+		}
+	}
+
+	printTopBorder(widths)
+	printRow(headers, widths)
+	printSeparator(widths)
+	for _, row := range rows {
+		printRow(row, widths)
+	}
+	printBottomBorder(widths)
+}
+
+// Helper functions for commands
+func PrintSuccessMessage(msg string) {
+	fmt.Printf("✔ %s\n", msg)
+}
+
+func PrintWarningMessage(msg string) {
+	fmt.Printf("⚠ %s\n", msg)
+}
+
+func PrintErrorMessage(msg string) {
+	fmt.Printf("✖ %s\n", msg)
+}
+
+func PrintInfoMessage(msg string) {
+	fmt.Printf("⠋ %s\n", msg)
 }
