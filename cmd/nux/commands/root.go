@@ -5,8 +5,12 @@ import (
 	"os"
 
 	"github.com/rsdenck/nux/internal/core/logger"
+	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var _ = fmt.Println
+var _ = os.Stderr
 
 var (
 	// Global flags
@@ -51,6 +55,7 @@ Run 'nux onboard' for first-time setup.`,
 		if err := logger.Init(opts); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		}
+		output.SetFormat(flagJSON, flagYAML)
 	},
 }
 

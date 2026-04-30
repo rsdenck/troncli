@@ -70,7 +70,7 @@ nux agent ask "create LVM with 50GB"
 
 ## Command Output
 
-All commands follow GCX-style JSON output by default:
+All commands follow GCX-style JSON output:
 
 ```json
 {
@@ -131,12 +131,6 @@ Init Systems:
 - openrc
 - sysvinit
 - runit
-
-Firewalls:
-- nftables
-- iptables
-- firewalld
-- ufw
 
 ## CI/CD
 

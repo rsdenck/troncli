@@ -8,6 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var _ = fmt.Printf
+var _ = os.Stderr
+var _ = os.Exit
+
 var onboardCmd = &cobra.Command{
 	Use:   "onboard",
 	Short: "Run first-time setup for NUX",

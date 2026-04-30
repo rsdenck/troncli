@@ -9,6 +9,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var _ = fmt.Printf
+var _ = os.Stderr
+
 var skillCmd = &cobra.Command{
 	Use:   "skill",
 	Short: "Manage NUX skills (external CLI integrations)",

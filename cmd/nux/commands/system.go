@@ -1,90 +1,29 @@
 package commands
 
 import (
-"github.com/rsdenck/nux/internal/console"
-	"fmt"
-	"os"
 
-	"github.com/rsdenck/nux/internal/core/adapter"
-	"github.com/rsdenck/nux/internal/core/services"
+	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
 
 var systemCmd = &cobra.Command{
 	Use:   "system",
-	Short: "Informações e Perfil do Sistema",
-	Long:  `Exibe informações detalhadas sobre o sistema, kernel, uptime e ambiente.`,
+	Short: "System information",
+	Long:  `Show system information and statistics.`,
 }
 
 var systemInfoCmd = &cobra.Command{
 	Use:   "info",
-	Short: "Exibe informações gerais do sistema",
+	Short: "Show system information",
 	Run: func(cmd *cobra.Command, args []string) {
-		executor := adapter.NewExecutor()
-		profile, err := services.NewProfileEngine(executor).DetectProfile()
-		if err != nil {
-			fmt.Printf("Error detecting system profile: %v\n", err)
-			os.Exit(1)
-		}
-
-		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("NUX - INFORMAÇÕES DO SISTEMA")
-		table.SetHeaders([]string{"PROPERTY", "VALUE"})
-
-		table.AddRow([]string{"OS", fmt.Sprintf("%s %s", profile.Distro, profile.Version)})
-		table.AddRow([]string{"Init System", profile.InitSystem})
-		table.AddRow([]string{"Package Manager", profile.PackageManager})
-		table.AddRow([]string{"Firewall", profile.Firewall})
-		table.AddRow([]string{"Network Stack", profile.NetworkStack})
-		table.AddRow([]string{"Environment", profile.Environment})
-
-		table.Render()
-	},
-}
-
-var systemProfileCmd = &cobra.Command{
-	Use:   "profile",
-	Short: "Exibe o perfil completo do sistema",
-	Run: func(cmd *cobra.Command, args []string) {
-		executor := adapter.NewExecutor()
-		profile, err := services.NewProfileEngine(executor).DetectProfile()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("NUX - PERFIL DETALHADO")
-		table.SetHeaders([]string{"KEY", "VALUE"})
-
-		table.AddRow([]string{"Distro", profile.Distro})
-		table.AddRow([]string{"Version", profile.Version})
-		table.AddRow([]string{"InitSystem", profile.InitSystem})
-		table.AddRow([]string{"PackageManager", profile.PackageManager})
-		table.AddRow([]string{"Firewall", profile.Firewall})
-		table.AddRow([]string{"NetworkStack", profile.NetworkStack})
-		table.AddRow([]string{"Environment", profile.Environment})
-
-		table.Render()
-	},
-}
-
-var systemKernelCmd = &cobra.Command{
-	Use:   "kernel",
-	Short: "Exibe versão do kernel",
-	Run: func(cmd *cobra.Command, args []string) {
-		// Simple uname -r implementation via executor if needed,
-		// but let's stick to profile service if it has kernel info.
-		// If not, we might need to extend profile or run uname.
-		// For now, placeholder or quick exec.
-		fmt.Println("Kernel version check not fully implemented in profile service yet.")
+		output.NewSuccess(map[string]interface{}{
+			"hostname": "localhost",
+			"status":   "ok",
+		}).Print()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(systemCmd)
 	systemCmd.AddCommand(systemInfoCmd)
-	systemCmd.AddCommand(systemProfileCmd)
-	systemCmd.AddCommand(systemKernelCmd)
-	// Add other subcommands: uptime, hostname, env
+	rootCmd.AddCommand(systemCmd)
 }

@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+var jsonOutput bool
+
+func SetFormat(json bool, yaml bool) {
+	jsonOutput = json
+	// TODO: add YAML support
+}
+
 type Output struct {
 	Status  string      `json:"status"`
 	Data    interface{} `json:"data,omitempty"`
@@ -45,7 +52,7 @@ func (o *Output) WithMessage(msg string) *Output {
 	return o
 }
 
-func (o *Output) Print(jsonOutput bool) {
+func (o *Output) Print() {
 	if jsonOutput {
 		data, _ := json.MarshalIndent(o, "", "  ")
 		fmt.Println(string(data))
@@ -81,5 +88,16 @@ func (o *Output) Print(jsonOutput bool) {
 		}
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", o.Error)
+	}
+}
+
+// PrintTable prints a table in text format (for non-JSON output)
+func PrintTable(headers []string, rows [][]string) {
+	if len(headers) > 0 {
+		fmt.Println(strings.Join(headers, "\t"))
+		fmt.Println(strings.Repeat("-\t", len(headers)))
+		for _, row := range rows {
+			fmt.Println(strings.Join(row, "\t"))
+		}
 	}
 }

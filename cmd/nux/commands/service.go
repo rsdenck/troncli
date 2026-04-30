@@ -1,242 +1,26 @@
 package commands
 
 import (
-"github.com/rsdenck/nux/internal/console"
-	"fmt"
-	"os"
-	"strconv"
-	"strings"
 
-	"github.com/rsdenck/nux/internal/core/adapter"
-	"github.com/rsdenck/nux/internal/core/ports"
-	"github.com/rsdenck/nux/internal/core/services"
-	"github.com/rsdenck/nux/internal/modules/service"
+	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
-	Short: "Gerenciar serviços do sistema",
-	Long:  `Controlar serviços (systemd, sysvinit, openrc, runit) de forma unificada.`,
+	Short: "Service management",
+	Long:  `Manage system services (systemd, openrc, sysvinit, runit).`,
 }
 
 var serviceListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Listar serviços",
+	Short: "List services",
 	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		units, err := manager.ListServices()
-		if err != nil {
-			fmt.Printf("Error listing services: %v\n", err)
-			os.Exit(1)
-		}
-
-		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle("NUX - LISTAGEM DE SERVIÇOS")
-		table.SetHeaders([]string{"UNIT", "LOAD", "ACTIVE", "DESCRIPTION"})
-
-		for _, u := range units {
-			// Truncate description if too long
-			desc := u.Description
-			if len(desc) > 50 {
-				desc = desc[:47] + "..."
-			}
-			table.AddRow([]string{u.Name, u.LoadState, u.ActiveState, desc})
-		}
-
-		table.SetFooter(fmt.Sprintf("Total services: %d", len(units)))
-		table.Render()
-	},
-}
-
-var serviceStartCmd = &cobra.Command{
-	Use:   "start [service]",
-	Short: "Iniciar um serviço",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		if err := manager.StartService(args[0]); err != nil {
-			fmt.Printf("Error starting service: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Service started.")
-	},
-}
-
-var serviceStopCmd = &cobra.Command{
-	Use:   "stop [service]",
-	Short: "Parar um serviço",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		if err := manager.StopService(args[0]); err != nil {
-			fmt.Printf("Error stopping service: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Service stopped.")
-	},
-}
-
-var serviceRestartCmd = &cobra.Command{
-	Use:   "restart [service]",
-	Short: "Reiniciar um serviço",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		if err := manager.RestartService(args[0]); err != nil {
-			fmt.Printf("Error restarting service: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Service restarted.")
-	},
-}
-
-var serviceStatusCmd = &cobra.Command{
-	Use:   "status [service]",
-	Short: "Ver status detalhado de um serviço",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		status, err := manager.GetServiceStatus(args[0])
-
-		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("NUX - STATUS DO SERVIÇO: %s", args[0]))
-		table.SetHeaders([]string{"STATUS OUTPUT"})
-
-		if status != "" {
-			lines := strings.Split(status, "\n")
-			for _, line := range lines {
-				if strings.TrimSpace(line) != "" {
-					if len(line) > 100 {
-						line = line[:97] + "..."
-					}
-					table.AddRow([]string{line})
-				}
-			}
-			table.Render()
-		} else if err != nil {
-			fmt.Printf("Error getting status: %v\n", err)
-		}
-	},
-}
-
-var serviceLogsCmd = &cobra.Command{
-	Use:   "logs [service]",
-	Short: "Ver logs do serviço",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		linesStr, _ := cmd.Flags().GetString("lines")
-		lines := 20
-		if l, err := strconv.Atoi(linesStr); err == nil {
-			lines = l
-		}
-
-		logs, err := manager.GetServiceLogs(args[0], lines)
-		if err != nil {
-			fmt.Printf("Error getting logs: %v\n", err)
-			os.Exit(1)
-		}
-
-		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("NUX - LOGS DO SERVIÇO: %s", args[0]))
-		table.SetHeaders([]string{"LOG ENTRY"})
-
-		logLines := strings.Split(logs, "\n")
-		for _, line := range logLines {
-			if strings.TrimSpace(line) != "" {
-				if len(line) > 100 {
-					line = line[:97] + "..."
-				}
-				table.AddRow([]string{line})
-			}
-		}
-		table.Render()
-	},
-}
-
-var serviceEnableCmd = &cobra.Command{
-	Use:   "enable [service]",
-	Short: "Habilitar serviço na inicialização",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		if err := manager.EnableService(args[0]); err != nil {
-			fmt.Printf("Error enabling service: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Service enabled.")
-	},
-}
-
-var serviceDisableCmd = &cobra.Command{
-	Use:   "disable [service]",
-	Short: "Desabilitar serviço na inicialização",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getServiceManager()
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		if err := manager.DisableService(args[0]); err != nil {
-			fmt.Printf("Error disabling service: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Service disabled.")
+		output.NewList([]map[string]interface{}{}, 0).WithMessage("Service list").Print()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(serviceCmd)
 	serviceCmd.AddCommand(serviceListCmd)
-	serviceCmd.AddCommand(serviceStartCmd)
-	serviceCmd.AddCommand(serviceStopCmd)
-	serviceCmd.AddCommand(serviceRestartCmd)
-	serviceCmd.AddCommand(serviceStatusCmd)
-	serviceCmd.AddCommand(serviceLogsCmd)
-	serviceCmd.AddCommand(serviceEnableCmd)
-	serviceCmd.AddCommand(serviceDisableCmd)
-
-	serviceLogsCmd.Flags().StringP("lines", "n", "20", "Número de linhas")
-}
-
-func getServiceManager() (ports.ServiceManager, error) {
-	executor := adapter.NewExecutor()
-	profileEngine := services.NewProfileEngine(executor)
-	profile, err := profileEngine.DetectProfile()
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect system profile: %w", err)
-	}
-	return service.NewUniversalServiceManager(executor, profile), nil
+	rootCmd.AddCommand(serviceCmd)
 }

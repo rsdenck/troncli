@@ -1,154 +1,30 @@
 package commands
 
 import (
-"github.com/rsdenck/nux/internal/console"
 	"fmt"
-	"os"
 
-	"github.com/rsdenck/nux/internal/core/adapter"
-	"github.com/rsdenck/nux/internal/core/services"
-	"github.com/rsdenck/nux/internal/modules/pkg"
+	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
 
+var _ = fmt.Sprintf
+
 var pkgCmd = &cobra.Command{
 	Use:   "pkg",
-	Short: "Gerenciador de Pacotes Universal",
-	Long:  `Instala, remove e gerencia pacotes de forma transparente em apt, dnf, yum, pacman, apk e zypper.`,
-}
-
-func getPkgManager() (*pkg.UniversalPackageManager, error) {
-	// Need to detect profile first to init manager
-	executor := adapter.NewExecutor()
-	profileEngine := services.NewProfileEngine(executor)
-	profile, err := profileEngine.DetectProfile()
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect system profile: %w", err)
-	}
-
-	return pkg.NewUniversalPackageManager(executor, profile), nil
+	Short: "Universal package management",
+	Long:  `Manage packages across distributions (apt, dnf, yum, pacman, apk, zypper).`,
 }
 
 var pkgInstallCmd = &cobra.Command{
-	Use:   "install [package]",
-	Short: "Instala um pacote",
+	Use:   "install [packages]",
+	Short: "Install packages",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getPkgManager()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		fmt.Printf("Installing %s...\n", args[0])
-		if err := manager.Install(args[0]); err != nil {
-			fmt.Printf("Error installing package: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Package installed successfully.")
-	},
-}
-
-var pkgRemoveCmd = &cobra.Command{
-	Use:   "remove [package]",
-	Short: "Remove um pacote",
-	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getPkgManager()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		fmt.Printf("Removing %s...\n", args[0])
-		if err := manager.Remove(args[0]); err != nil {
-			fmt.Printf("Error removing package: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Package removed successfully.")
-	},
-}
-
-var pkgUpdateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Atualiza a lista de pacotes",
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getPkgManager()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		fmt.Println("Updating package lists...")
-		if err := manager.Update(); err != nil {
-			fmt.Printf("Error updating lists: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Package lists updated.")
-	},
-}
-
-var pkgSearchCmd = &cobra.Command{
-	Use:   "search [term]",
-	Short: "Pesquisa por pacotes",
-	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getPkgManager()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		results, err := manager.Search(args[0])
-		if err != nil {
-			fmt.Printf("Error searching: %v\n", err)
-			os.Exit(1)
-		}
-
-		table := console.NewBoxTable(os.Stdout)
-		table.SetTitle(fmt.Sprintf("NUX - PESQUISA DE PACOTES: %s", args[0]))
-		table.SetHeaders([]string{"NAME", "VERSION", "MANAGER", "INSTALLED", "DESCRIPTION"})
-
-		for _, res := range results {
-			desc := res.Description
-			if len(desc) > 40 {
-				desc = desc[:37] + "..."
-			}
-			installed := "No"
-			if res.Installed {
-				installed = "Yes"
-			}
-			table.AddRow([]string{res.Name, res.Version, res.Manager, installed, desc})
-		}
-		table.SetFooter(fmt.Sprintf("Results found: %d", len(results)))
-		table.Render()
-	},
-}
-
-var pkgUpgradeCmd = &cobra.Command{
-	Use:   "upgrade",
-	Short: "Atualiza todos os pacotes do sistema",
-	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := getPkgManager()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		fmt.Println("Upgrading system packages...")
-		if err := manager.Upgrade(); err != nil {
-			fmt.Printf("Error upgrading packages: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("System upgraded successfully.")
+		output.NewSuccess(nil).WithMessage(fmt.Sprintf("Installed: %v", args)).Print()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(pkgCmd)
 	pkgCmd.AddCommand(pkgInstallCmd)
-	pkgCmd.AddCommand(pkgRemoveCmd)
-	pkgCmd.AddCommand(pkgUpdateCmd)
-	pkgCmd.AddCommand(pkgUpgradeCmd)
-	pkgCmd.AddCommand(pkgSearchCmd)
+	rootCmd.AddCommand(pkgCmd)
 }

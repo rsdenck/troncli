@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUX | Production-Grade Linux CLI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Paleta Linux Refinada - Amarelo Queimado / Ocre */
+            --linux-black: #0d0d0d;
+            --linux-yellow-burnt: #c9a01a;
+            --linux-gold-dim: #8c6a00;
+            --linux-white: #e0e0e0;
+            
+            --bg: #050505;
+            --card-bg: #0f0f0f;
+            --accent: var(--linux-yellow-burnt);
+            --text: #a0a0a0;
+            --text-dim: #4a4a4a;
+            --border: #1a1a1a;
+            --success: #32a852;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .hero {
+            width: 100%;
+            padding: 6rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            background: radial-gradient(circle at 50% -20%, #1a1a1a 0%, var(--bg) 80%);
+        }
+        
+        .ascii-logo {
+            font-family: 'Fira Code', monospace;
+            white-space: pre;
+            color: var(--linux-yellow-burnt);
+            font-size: clamp(8px, 1.4vw, 13px);
+            line-height: 1.1;
+            display: inline-block;
+            margin-bottom: 2.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(201, 160, 26, 0.15);
+        }
+        
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: -3px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        
+        .hero h1 span {
+            color: var(--linux-yellow-burnt);
+        }
+        
+        .hero p {
+            color: var(--text-dim);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+        }
+        
+        .container {
+            max-width: 1100px;
+            width: 90%;
+            padding: 4rem 0;
+        }
+        
+        .terminal-window {
+            background: #000000;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.9);
+            margin-bottom: 4rem;
+        }
+        
+        .terminal-header {
+            background: #0d0d0d;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        
+        .dots { display: flex; gap: 6px; }
+        .dot { width: 9px; height: 9px; border-radius: 50%; background: #222; }
+        
+        .terminal-body {
+            padding: 35px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            color: #ccc;
+            overflow-x: auto;
+        }
+        
+        .prompt { color: var(--linux-yellow-burnt); margin-right: 12px; font-weight: bold; }
+        .cmd { color: #fff; }
+        .comment { color: #555; }
+        .json-key { color: #9cdcfe; }
+        .json-val { color: #ce9178; }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: #333;
+            background: #141414;
+        }
+        
+        .feature-card h3 {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .feature-card h3 span { color: var(--linux-yellow-burnt); }
+        
+        .btn {
+            background: var(--linux-yellow-burnt);
+            color: #000;
+            padding: 14px 38px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 700;
+            display: inline-block;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1.5px;
+        }
+        
+        .btn:hover {
+            background: #e6b800;
+            transform: translateY(-2px);
+        }
+        
+        .distros {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 4rem;
+            opacity: 0.4;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+        }
+        
+        footer {
+            padding: 6rem 2rem;
+            color: #222;
+            text-align: center;
+            width: 100%;
+        }
+        
+        @media (max-width: 600px) {
+            .ascii-logo { font-size: 5px; }
+            .hero h1 { font-size: 2.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="ascii-logo">
+ ███╗   ██╗██╗   ██╗██╗  ██╗
+ ████╗  ██║██║   ██║╚██╗██╔╝
+ ██╔██╗ ██║██║   ██║ ╚███╔╝ 
+ ██║╚██╗██║██║   ██║ ██╔██╗ 
+ ██║ ╚████║╚██████╔╝██╔╝ ██╗
+ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝</div>
+    <h1>NU<span>X</span></h1>
+    <p>O CLI moderno para operações Linux complexas: Gestão de pacotes, IA e Skill Engine.</p>
+    <div style="display: flex; gap: 15px; justify-content: center;">
+        <a href="https://github.com/rsdenck/nux" class="btn">VER NO GITHUB</a>
+    </div>
+</header>
+
+<div class="container">
+    <div class="terminal-window">
+        <div class="terminal-header">
+            <div class="dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <span style="font-size: 10px; color: #444; font-family: 'Fira Code';">NUX_CLI_MASTER_V0.2.19</span>
+        </div>
+        <div class="terminal-body">
+            <div><span class="prompt">$</span><span class="cmd">nux onboard</span></div>
+            <div><span style="color: var(--linux-yellow-burnt)">[INFO]</span> Initializing production-grade environment...</div>
+            <div><span style="color: var(--success)">[OK]</span> Skill Engine linked at ~/.skills/</div>
+            <br>
+            <div><span class="prompt">$</span><span class="cmd">nux agent ask "setup lvm 50gb on sdb"</span></div>
+            <div><span style="color: #666">// Usando Ollama (qwen3-coder)...</span></div>
+            <br>
+            <div style="background: #0a0a0a; padding: 15px; border-left: 2px solid var(--linux-yellow-burnt); margin: 10px 0;">
+                <span class="json-key">{</span><br>
+                &nbsp;&nbsp;<span class="json-key">"status"</span>: <span class="json-val">"success"</span>,<br>
+                &nbsp;&nbsp;<span class="json-key">"data"</span>: { <span class="json-key">"command"</span>: <span class="json-val">"pvcreate /dev/sdb && vgcreate data_vg /dev/sdb..."</span> }<br>
+                <span class="json-key">}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="features">
+        <div class="feature-card">
+            <h3><span>❯</span> Multi-Distribution</h3>
+            <p>Suporte nativo para apt, dnf, pacman, apk e zypper com detecção automática do host.</p>
+        </div>
+        <div class="feature-card">
+            <h3><span>❯</span> Skill Engine</h3>
+            <p>Estenda o NUX com arquivos markdown simples. Gerencie Docker, K8s, e Cloud APIs sem trocar de ferramenta.</p>
+        </div>
+        <div class="feature-card">
+            <h3><span>❯</span> AI Integration</h3>
+            <p>Agente Ollama integrado localmente para diagnósticos e sugestão de comandos complexos.</p>
+        </div>
+    </div>
+    
+    <div class="distros">
+        DEBIAN • UBUNTU • RHEL • FEDORA • ARCH • ALPINE • OPENSUSE
+    </div>
+</div>
+
+<footer>
+    <p>Distribuído sob licença MIT. Projetado para Linux.</p>
+</footer>
+
+</body>
+</html>
