@@ -2,13 +2,15 @@ package commands
 
 import (
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var processExecutor core.Executor = &core.RealExecutor{}
 
 var processCmd = &cobra.Command{
 	Use:   "process",
@@ -20,17 +22,15 @@ var processListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List processes",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Use ps with custom output format
-		psCmd := exec.Command("ps", "aux")
-		out, err := psCmd.CombinedOutput()
+		out, err := processExecutor.CombinedOutput("ps", "aux")
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to list processes: %s", strings.TrimSpace(string(out))), "PROCESS_LIST_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to list processes: %s", err.Error()), "PROCESS_LIST_ERROR").Print()
 			return
 		}
 
 		// Parse ps output
-		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		lines := strings.Split(out, "\n")
 		if len(lines) < 1 {
 			output.NewList([]map[string]interface{}{}, 0).WithMessage("Process list").Print()
 			return
@@ -68,11 +68,11 @@ var processKillCmd = &cobra.Command{
 	Short: "Kill a process",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pid := args[0]
+		pid := core.SanitizeInput(args[0])
 		signal := "TERM"
 
 		if len(args) > 1 {
-			signal = args[1]
+			signal = core.SanitizeInput(args[1])
 		}
 
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -87,11 +87,10 @@ var processKillCmd = &cobra.Command{
 			return
 		}
 
-		killCmd := exec.Command("kill", "-"+signal, pid)
-		out, err := killCmd.CombinedOutput()
+		_, err := processExecutor.CombinedOutput("kill", "-"+signal, pid)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to kill process: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PROCESS_KILL_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to kill process: %s", err.Error()), "PROCESS_KILL_ERROR").Print()
 			return
 		}
 
@@ -108,7 +107,7 @@ var processInfoCmd = &cobra.Command{
 	Short: "Show process information",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		pid := args[0]
+		pid := core.SanitizeInput(args[0])
 
 		// Validate PID is numeric
 		if _, err := strconv.Atoi(pid); err != nil {
@@ -117,27 +116,27 @@ var processInfoCmd = &cobra.Command{
 		}
 
 		// Get process info using ps
-		psCmd := exec.Command("ps", "-p", pid, "-o", "pid,user,%cpu,%mem,vsz,rss,tty,stat,start,time,comm")
-		out, err := psCmd.CombinedOutput()
+		out, err := processExecutor.CombinedOutput("ps", "-p", pid, "-o", "pid,user,%cpu,%mem,vsz,rss,tty,stat,start,time,comm")
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to get process info: %s", strings.TrimSpace(string(out))), "PROCESS_INFO_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to get process info: %s", err.Error()), "PROCESS_INFO_ERROR").Print()
 			return
 		}
 
 		// Also get full command line
-		cmdlineCmd := exec.Command("cat", fmt.Sprintf("/proc/%s/cmdline", pid))
-		cmdlineOut, _ := cmdlineCmd.CombinedOutput()
+		cmdlineOut, _ := processExecutor.CombinedOutput("cat", fmt.Sprintf("/proc/%s/cmdline", pid))
 
 		output.NewSuccess(map[string]interface{}{
 			"pid":     pid,
-			"ps_info": strings.TrimSpace(string(out)),
-			"cmdline": strings.TrimSpace(string(cmdlineOut)),
+			"ps_info": out,
+			"cmdline": cmdlineOut,
 		}).Print()
 	},
 }
 
 func init() {
+	processKillCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
 	processCmd.AddCommand(processListCmd)
 	processCmd.AddCommand(processKillCmd)
 	processCmd.AddCommand(processInfoCmd)

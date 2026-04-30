@@ -2,12 +2,14 @@ package commands
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var usersExecutor core.Executor = &core.RealExecutor{}
 
 var usersCmd = &cobra.Command{
 	Use:   "users",
@@ -19,17 +21,14 @@ var usersListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List users",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Use getent passwd to list users
-		getentCmd := exec.Command("getent", "passwd")
-		out, err := getentCmd.CombinedOutput()
+		out, err := usersExecutor.CombinedOutput("getent", "passwd")
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to list users: %s", strings.TrimSpace(string(out))), "USERS_LIST_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to list users: %s", err.Error()), "USERS_LIST_ERROR").Print()
 			return
 		}
 
-		// Parse output
-		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		lines := strings.Split(out, "\n")
 		items := []map[string]interface{}{}
 
 		for _, line := range lines {
@@ -57,7 +56,7 @@ var usersAddCmd = &cobra.Command{
 	Short: "Add a new user",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		username := args[0]
+		username := core.SanitizeInput(args[0])
 
 		createHome, _ := cmd.Flags().GetBool("create-home")
 		shell, _ := cmd.Flags().GetString("shell")
@@ -86,11 +85,10 @@ var usersAddCmd = &cobra.Command{
 			return
 		}
 
-		useraddCmd := exec.Command("useradd", cmdArgs...)
-		out, err := useraddCmd.CombinedOutput()
+		_, err := usersExecutor.CombinedOutput("useradd", cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to add user: %s - %s", err.Error(), strings.TrimSpace(string(out))), "USERS_ADD_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to add user: %s", err.Error()), "USERS_ADD_ERROR").Print()
 			return
 		}
 
@@ -106,10 +104,9 @@ var usersDeleteCmd = &cobra.Command{
 	Short: "Delete a user",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		username := args[0]
+		username := core.SanitizeInput(args[0])
 
 		removeHome, _ := cmd.Flags().GetBool("remove-home")
-
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		cmdArgs := []string{}
@@ -127,11 +124,10 @@ var usersDeleteCmd = &cobra.Command{
 			return
 		}
 
-		userdelCmd := exec.Command("userdel", cmdArgs...)
-		out, err := userdelCmd.CombinedOutput()
+		_, err := usersExecutor.CombinedOutput("userdel", cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to delete user: %s - %s", err.Error(), strings.TrimSpace(string(out))), "USERS_DELETE_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to delete user: %s", err.Error()), "USERS_DELETE_ERROR").Print()
 			return
 		}
 
@@ -146,15 +142,14 @@ var groupsListCmd = &cobra.Command{
 	Use:   "groups",
 	Short: "List groups",
 	Run: func(cmd *cobra.Command, args []string) {
-		getentCmd := exec.Command("getent", "group")
-		out, err := getentCmd.CombinedOutput()
+		out, err := usersExecutor.CombinedOutput("getent", "group")
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to list groups: %s", strings.TrimSpace(string(out))), "USERS_GROUPS_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to list groups: %s", err.Error()), "USERS_GROUPS_ERROR").Print()
 			return
 		}
 
-		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		lines := strings.Split(out, "\n")
 		items := []map[string]interface{}{}
 
 		for _, line := range lines {
@@ -176,12 +171,16 @@ var groupsListCmd = &cobra.Command{
 }
 
 func init() {
-	usersCmd.AddCommand(usersListCmd)
 	usersAddCmd.Flags().Bool("create-home", true, "Create home directory")
 	usersAddCmd.Flags().String("shell", "", "Login shell")
 	usersAddCmd.Flags().String("group", "", "Primary group")
-	usersCmd.AddCommand(usersAddCmd)
+	usersAddCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
 	usersDeleteCmd.Flags().Bool("remove-home", false, "Remove home directory")
+	usersDeleteCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
+	usersCmd.AddCommand(usersListCmd)
+	usersCmd.AddCommand(usersAddCmd)
 	usersCmd.AddCommand(usersDeleteCmd)
 	usersCmd.AddCommand(groupsListCmd)
 	rootCmd.AddCommand(usersCmd)

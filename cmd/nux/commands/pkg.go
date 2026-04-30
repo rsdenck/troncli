@@ -3,12 +3,14 @@ package commands
 import (
 	"fmt"
 	"os/exec"
-	"runtime"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var pkgExecutor core.Executor = &core.RealExecutor{}
 
 var pkgCmd = &cobra.Command{
 	Use:   "pkg",
@@ -16,9 +18,7 @@ var pkgCmd = &cobra.Command{
 	Long:  `Manage packages across distributions (apt, dnf, yum, pacman, apk, zypper).`,
 }
 
-// detectPackageManager detects the package manager for the current distribution
 func detectPackageManager() string {
-	// Check for package managers in order of preference
 	managers := []struct {
 		name    string
 		command string
@@ -85,11 +85,10 @@ var pkgInstallCmd = &cobra.Command{
 			return
 		}
 
-		execCmd := exec.Command(command, cmdArgs...)
-		out, err := execCmd.CombinedOutput()
+		_, err := pkgExecutor.CombinedOutput(command, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("install failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_INSTALL_ERROR").Print()
+			output.NewError(fmt.Sprintf("install failed: %s", err.Error()), "PKG_INSTALL_ERROR").Print()
 			return
 		}
 
@@ -97,7 +96,6 @@ var pkgInstallCmd = &cobra.Command{
 			"packages":        args,
 			"package_manager": pkgManager,
 			"status":          "installed",
-			"output":          strings.TrimSpace(string(out)),
 		}).Print()
 	},
 }
@@ -145,18 +143,17 @@ var pkgUpdateCmd = &cobra.Command{
 			return
 		}
 
-		execCmd := exec.Command(command, cmdArgs...)
-		out, err := execCmd.CombinedOutput()
+		out, err := pkgExecutor.CombinedOutput(command, cmdArgs...)
 
 		if err != nil && pkgManager != "dnf" && pkgManager != "yum" {
-			output.NewError(fmt.Sprintf("update failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_UPDATE_ERROR").Print()
+			output.NewError(fmt.Sprintf("update failed: %s", err.Error()), "PKG_UPDATE_ERROR").Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
 			"package_manager": pkgManager,
 			"status":          "updated",
-			"output":          strings.TrimSpace(string(out)),
+			"output":          out,
 		}).Print()
 	},
 }
@@ -191,17 +188,16 @@ var pkgListCmd = &cobra.Command{
 			return
 		}
 
-		execCmd := exec.Command(command, cmdArgs...)
-		out, err := execCmd.CombinedOutput()
+		out, err := pkgExecutor.CombinedOutput(command, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("list failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_LIST_ERROR").Print()
+			output.NewError(fmt.Sprintf("list failed: %s", err.Error()), "PKG_LIST_ERROR").Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
 			"package_manager": pkgManager,
-			"output":          strings.TrimSpace(string(out)),
+			"output":          out,
 		}).Print()
 	},
 }
@@ -211,7 +207,7 @@ var pkgSearchCmd = &cobra.Command{
 	Short: "Search for packages",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		query := args[0]
+		query := core.SanitizeInput(args[0])
 		pkgManager := detectPackageManager()
 
 		var command string
@@ -241,29 +237,28 @@ var pkgSearchCmd = &cobra.Command{
 			return
 		}
 
-		execCmd := exec.Command(command, cmdArgs...)
-		out, err := execCmd.CombinedOutput()
+		out, err := pkgExecutor.CombinedOutput(command, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("search failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_SEARCH_ERROR").Print()
+			output.NewError(fmt.Sprintf("search failed: %s", err.Error()), "PKG_SEARCH_ERROR").Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
 			"query":           query,
 			"package_manager": pkgManager,
-			"output":          strings.TrimSpace(string(out)),
+			"output":          out,
 		}).Print()
 	},
 }
 
 func init() {
+	pkgInstallCmd.Flags().Bool("dry-run", false, "Simulate command")
+	pkgUpdateCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
 	pkgCmd.AddCommand(pkgInstallCmd)
 	pkgCmd.AddCommand(pkgUpdateCmd)
 	pkgCmd.AddCommand(pkgListCmd)
 	pkgCmd.AddCommand(pkgSearchCmd)
 	rootCmd.AddCommand(pkgCmd)
-
-	// Set GOOS for detection
-	_ = runtime.GOOS
 }

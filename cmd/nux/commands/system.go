@@ -4,13 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var systemExecutor core.Executor = &core.RealExecutor{}
 
 var systemCmd = &cobra.Command{
 	Use:   "system",
@@ -39,16 +41,15 @@ var systemUptimeCmd = &cobra.Command{
 	Use:   "uptime",
 	Short: "Show system uptime",
 	Run: func(cmd *cobra.Command, args []string) {
-		uptimeCmd := exec.Command("uptime")
-		out, err := uptimeCmd.CombinedOutput()
+		out, err := systemExecutor.CombinedOutput("uptime")
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to get uptime: %s", strings.TrimSpace(string(out))), "SYSTEM_UPTIME_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to get uptime: %s", err.Error()), "SYSTEM_UPTIME_ERROR").Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
-			"uptime": strings.TrimSpace(string(out)),
+			"uptime": out,
 		}).Print()
 	},
 }
@@ -70,16 +71,14 @@ func getHostname() string {
 }
 
 func getKernelVersion() string {
-	unameCmd := exec.Command("uname", "-r")
-	out, err := unameCmd.CombinedOutput()
+	out, err := systemExecutor.CombinedOutput("uname", "-r")
 	if err != nil {
 		return "unknown"
 	}
-	return strings.TrimSpace(string(out))
+	return out
 }
 
 func getOSInfo() string {
-	// Try /etc/os-release first
 	if file, err := os.Open("/etc/os-release"); err == nil {
 		defer file.Close()
 		scanner := bufio.NewScanner(file)
@@ -91,32 +90,28 @@ func getOSInfo() string {
 		}
 	}
 
-	// Fallback to lsb_release
-	lsbCmd := exec.Command("lsb_release", "-ds")
-	out, err := lsbCmd.CombinedOutput()
+	out, err := systemExecutor.CombinedOutput("lsb_release", "-ds")
 	if err == nil {
-		return strings.TrimSpace(strings.Trim(string(out), "\""))
+		return strings.Trim(out, "\"")
 	}
 
 	return "unknown"
 }
 
 func getUptime() string {
-	uptimeCmd := exec.Command("uptime", "-p")
-	out, err := uptimeCmd.CombinedOutput()
+	out, err := systemExecutor.CombinedOutput("uptime", "-p")
 	if err != nil {
 		return "unknown"
 	}
-	return strings.TrimSpace(string(out))
+	return out
 }
 
 func getLoadAverage() string {
-	loadCmd := exec.Command("cat", "/proc/loadavg")
-	out, err := loadCmd.CombinedOutput()
+	out, err := systemExecutor.CombinedOutput("cat", "/proc/loadavg")
 	if err != nil {
 		return "unknown"
 	}
-	return strings.TrimSpace(string(out))
+	return out
 }
 
 func init() {

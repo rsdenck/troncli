@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var remoteExecutor core.Executor = &core.RealExecutor{}
 
 var remoteCmd = &cobra.Command{
 	Use:   "remote",
@@ -57,8 +59,8 @@ var remoteExecCmd = &cobra.Command{
 	Short: "Execute command on remote host",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		host := args[0]
-		command := strings.Join(args[1:], " ")
+		host := core.SanitizeInput(args[0])
+		command := core.SanitizeInput(strings.Join(args[1:], " "))
 
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
@@ -72,23 +74,24 @@ var remoteExecCmd = &cobra.Command{
 			return
 		}
 
-		sshCmd := exec.Command("ssh", host, command)
-		out, err := sshCmd.CombinedOutput()
+		out, err := remoteExecutor.CombinedOutput("ssh", host, command)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("remote execution failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "REMOTE_EXEC_ERROR").Print()
+			output.NewError(fmt.Sprintf("remote execution failed: %s", err.Error()), "REMOTE_EXEC_ERROR").Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
 			"host":    host,
 			"command": command,
-			"output":  strings.TrimSpace(string(out)),
+			"output":  out,
 		}).Print()
 	},
 }
 
 func init() {
+	remoteExecCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
 	remoteCmd.AddCommand(remoteListCmd)
 	remoteCmd.AddCommand(remoteExecCmd)
 	rootCmd.AddCommand(remoteCmd)

@@ -3,12 +3,14 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var serviceExecutor core.Executor = &core.RealExecutor{}
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
@@ -16,7 +18,6 @@ var serviceCmd = &cobra.Command{
 	Long:  `Manage system services (systemd, openrc, sysvinit, runit).`,
 }
 
-// ServiceInfo represents a service entry matching output.md format
 type ServiceInfo struct {
 	Name    string
 	State   string
@@ -29,18 +30,15 @@ var serviceListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List services",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Use systemctl to list services with proper parsing
-		systemctlCmd := exec.Command("systemctl", "list-units", "--type=service", "--all", "--no-pager")
-		out, err := systemctlCmd.CombinedOutput()
-
+		out, err := serviceExecutor.CombinedOutput("systemctl", "list-units", "--type=service", "--all", "--no-pager")
+		
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to list services: %s", strings.TrimSpace(string(out))), "SERVICE_LIST_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to list services: %s", strings.TrimSpace(out)), "SERVICE_LIST_ERROR").Print()
 			return
 		}
 
-		services := parseServiceOutput(string(out))
+		services := parseServiceOutput(out)
 
-		// Convert to items for output formatter
 		items := []map[string]interface{}{}
 		for _, s := range services {
 			items = append(items, map[string]interface{}{
@@ -66,47 +64,38 @@ func parseServiceOutput(out string) []ServiceInfo {
 			continue
 		}
 
-		// Parse systemctl list-units output
-		// Format: UNIT LOAD ACTIVE SUB DESCRIPTION
 		fields := strings.Fields(line)
 		if len(fields) < 4 {
 			continue
 		}
 
 		name := strings.TrimSuffix(fields[0], ".service")
-
-		// Get state (ACTIVE column)
 		state := fields[2]
+		
 		if state == "active" {
 			state = "active"
 		} else if state == "inactive" || state == "dead" {
 			state = "inactive"
 		}
 
-		// Check if enabled
 		enabled := "no"
 		if state == "active" {
 			enabled = "yes"
 		}
 
-		// Try to get PID
 		pid := "-"
-		pidCmd := exec.Command("systemctl", "show", name, "--property=MainPID", "--value")
-		pidOut, _ := pidCmd.CombinedOutput()
-		pidStr := strings.TrimSpace(string(pidOut))
+		pidOut, _ := serviceExecutor.CombinedOutput("systemctl", "show", name, "--property=MainPID", "--value")
+		pidStr := strings.TrimSpace(pidOut)
 		if pidStr != "" && pidStr != "0" {
 			pid = pidStr
 		}
-
-		// Ports (simplified - would need ss/netstat for real implementation)
-		ports := "-"
 
 		services = append(services, ServiceInfo{
 			Name:    name,
 			State:   state,
 			Enabled: enabled,
 			Pid:     pid,
-			Ports:   ports,
+			Ports:   "-",
 		})
 	}
 
@@ -118,24 +107,20 @@ var serviceStatusCmd = &cobra.Command{
 	Short: "Show service status",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		service := args[0]
-
-		systemctlCmd := exec.Command("systemctl", "status", service)
-		out, _ := systemctlCmd.CombinedOutput()
-
-		// Try to parse as JSON if available
-		jsonCmd := exec.Command("systemctl", "show", service, "--output=json")
-		jsonOut, _ := jsonCmd.CombinedOutput()
+		service := core.SanitizeInput(args[0])
+		
+		out, _ := serviceExecutor.CombinedOutput("systemctl", "status", service)
+		jsonOut, _ := serviceExecutor.CombinedOutput("systemctl", "show", service, "--output=json")
 
 		var jsonData interface{}
-		if jsonErr := json.Unmarshal(jsonOut, &jsonData); jsonErr == nil {
+		if jsonErr := json.Unmarshal([]byte(jsonOut), &jsonData); jsonErr == nil {
 			output.NewSuccess(jsonData).Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
 			"service": service,
-			"output":  strings.TrimSpace(string(out)),
+			"output":  strings.TrimSpace(out),
 		}).Print()
 	},
 }
@@ -145,8 +130,7 @@ var serviceStartCmd = &cobra.Command{
 	Short: "Start a service",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		service := args[0]
-
+		service := core.SanitizeInput(args[0])
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		if dryRun {
@@ -159,11 +143,10 @@ var serviceStartCmd = &cobra.Command{
 			return
 		}
 
-		systemctlCmd := exec.Command("systemctl", "start", service)
-		out, err := systemctlCmd.CombinedOutput()
-
+		_, err := serviceExecutor.CombinedOutput("systemctl", "start", service)
+		
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to start service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_START_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to start service: %s", err.Error()), "SERVICE_START_ERROR").Print()
 			return
 		}
 
@@ -180,8 +163,7 @@ var serviceStopCmd = &cobra.Command{
 	Short: "Stop a service",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		service := args[0]
-
+		service := core.SanitizeInput(args[0])
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		if dryRun {
@@ -194,11 +176,10 @@ var serviceStopCmd = &cobra.Command{
 			return
 		}
 
-		systemctlCmd := exec.Command("systemctl", "stop", service)
-		out, err := systemctlCmd.CombinedOutput()
-
+		_, err := serviceExecutor.CombinedOutput("systemctl", "stop", service)
+		
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to stop service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_STOP_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to stop service: %s", err.Error()), "SERVICE_STOP_ERROR").Print()
 			return
 		}
 
@@ -215,8 +196,7 @@ var serviceEnableCmd = &cobra.Command{
 	Short: "Enable service at boot",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		service := args[0]
-
+		service := core.SanitizeInput(args[0])
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		if dryRun {
@@ -229,11 +209,10 @@ var serviceEnableCmd = &cobra.Command{
 			return
 		}
 
-		systemctlCmd := exec.Command("systemctl", "enable", service)
-		out, err := systemctlCmd.CombinedOutput()
-
+		_, err := serviceExecutor.CombinedOutput("systemctl", "enable", service)
+		
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to enable service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_ENABLE_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to enable service: %s", err.Error()), "SERVICE_ENABLE_ERROR").Print()
 			return
 		}
 
@@ -250,8 +229,7 @@ var serviceDisableCmd = &cobra.Command{
 	Short: "Disable service at boot",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		service := args[0]
-
+		service := core.SanitizeInput(args[0])
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		if dryRun {
@@ -264,11 +242,10 @@ var serviceDisableCmd = &cobra.Command{
 			return
 		}
 
-		systemctlCmd := exec.Command("systemctl", "disable", service)
-		out, err := systemctlCmd.CombinedOutput()
-
+		_, err := serviceExecutor.CombinedOutput("systemctl", "disable", service)
+		
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to disable service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_DISABLE_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to disable service: %s", err.Error()), "SERVICE_DISABLE_ERROR").Print()
 			return
 		}
 
@@ -281,11 +258,18 @@ var serviceDisableCmd = &cobra.Command{
 }
 
 func init() {
+	serviceListCmd.Flags().Bool("json", false, "Output in JSON format")
 	serviceCmd.AddCommand(serviceListCmd)
 	serviceCmd.AddCommand(serviceStatusCmd)
 	serviceCmd.AddCommand(serviceStartCmd)
 	serviceCmd.AddCommand(serviceStopCmd)
 	serviceCmd.AddCommand(serviceEnableCmd)
 	serviceCmd.AddCommand(serviceDisableCmd)
+	
+	serviceStartCmd.Flags().Bool("dry-run", false, "Simulate command")
+	serviceStopCmd.Flags().Bool("dry-run", false, "Simulate command")
+	serviceEnableCmd.Flags().Bool("dry-run", false, "Simulate command")
+	serviceDisableCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
 	rootCmd.AddCommand(serviceCmd)
 }

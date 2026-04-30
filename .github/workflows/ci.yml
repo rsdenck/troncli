@@ -1,59 +1,93 @@
-name: CI
+name: NUX CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  build:
+  test:
+    name: Test
     runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+    
+    - name: Install dependencies
+      run: go mod download
+    
+    - name: Run unit tests
+      run: go test ./... -v -coverprofile=coverage.txt -covermode=atomic
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.txt
+        fail_ci_if_error: false
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
     strategy:
       matrix:
-        go-version: [1.24]
-        os: [ubuntu-latest, macos-latest]
-        
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
+    
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ matrix.go-version }}
-        
-    - name: Build
-      run: go build -v ./cmd/nux
-      
-    - name: Test
-      run: go test -v ./...
-      
+        go-version: '1.21'
+    
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        go build -v -o nux-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/nux
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nux-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: nux-${{ matrix.goos }}-${{ matrix.goarch }}
+
   lint:
+    name: Lint
     runs-on: ubuntu-latest
+    
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
     
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v4
       with:
         version: latest
-        
-  release:
-    if: startsWith(github.ref, 'refs/tags/')
+        args: --timeout=5m
+
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
+    
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - name: Run Gosec Security Scanner
+      uses: securego/gosec@master
       with:
-        go-version: 1.24
-        
-    - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v6
-      with:
-        distribution: goreleaser
-        version: latest
-        args: release --clean
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        args: ./...

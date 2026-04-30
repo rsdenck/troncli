@@ -3,12 +3,14 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var networkExecutor core.Executor = &core.RealExecutor{}
 
 var networkCmd = &cobra.Command{
 	Use:   "network",
@@ -50,25 +52,26 @@ var networkListCmd = &cobra.Command{
 }
 
 func getNetworkInterfaces() ([]NetworkInterface, error) {
-	linkCmd := exec.Command("ip", "-j", "link", "show")
-	linkOut, err := linkCmd.CombinedOutput()
+	linkOut, err := networkExecutor.CombinedOutput("ip", "-j", "link", "show")
 	if err != nil {
-		return nil, fmt.Errorf("ip link show failed: %s", string(linkOut))
+		return nil, fmt.Errorf("ip link show failed: %s", err.Error())
 	}
 
-	addrCmd := exec.Command("ip", "-j", "addr", "show")
-	addrOut, err := addrCmd.CombinedOutput()
+	addrOut, err := networkExecutor.CombinedOutput("ip", "-j", "addr", "show")
 	if err != nil {
-		return nil, fmt.Errorf("ip addr show failed: %s", string(addrOut))
+		return nil, fmt.Errorf("ip addr show failed: %s", err.Error())
 	}
+
+	linkOut = core.SanitizeInput(linkOut)
+	addrOut = core.SanitizeInput(addrOut)
 
 	var linkData []map[string]interface{}
-	if err := json.Unmarshal(linkOut, &linkData); err != nil {
+	if err := json.Unmarshal([]byte(linkOut), &linkData); err != nil {
 		return nil, err
 	}
 
 	var addrData []map[string]interface{}
-	if err := json.Unmarshal(addrOut, &addrData); err != nil {
+	if err := json.Unmarshal([]byte(addrOut), &addrData); err != nil {
 		return nil, err
 	}
 
@@ -127,10 +130,9 @@ func getNetworkInterfaces() ([]NetworkInterface, error) {
 
 			speed := "-"
 			if state == "up" && name != "lo" && !strings.HasPrefix(name, "veth") && !strings.HasPrefix(name, "br-") {
-				speedCmd := exec.Command("ethtool", name)
-				speedOut, _ := speedCmd.CombinedOutput()
-				if strings.Contains(string(speedOut), "Speed:") {
-					lines := strings.Split(string(speedOut), "\n")
+				speedOut, _ := networkExecutor.CombinedOutput("ethtool", name)
+				if strings.Contains(speedOut, "Speed:") {
+					lines := strings.Split(speedOut, "\n")
 					for _, line := range lines {
 						if strings.Contains(line, "Speed:") {
 							parts := strings.Fields(line)
@@ -163,25 +165,24 @@ var networkShowCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cmdArgs := []string{"-j", "addr", "show"}
 		if len(args) > 0 {
-			cmdArgs = append(cmdArgs, args[0])
+			iface := core.SanitizeInput(args[0])
+			cmdArgs = append(cmdArgs, iface)
 		}
 
-		ipCmd := exec.Command("ip", cmdArgs...)
-		out, err := ipCmd.CombinedOutput()
-
+		out, err := networkExecutor.CombinedOutput("ip", cmdArgs...)
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to show interface: %s", strings.TrimSpace(string(out))), "NETWORK_SHOW_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to show interface: %s", strings.TrimSpace(out)), "NETWORK_SHOW_ERROR").Print()
 			return
 		}
 
 		var result interface{}
-		if err := json.Unmarshal(out, &result); err == nil {
+		if err := json.Unmarshal([]byte(out), &result); err == nil {
 			output.NewSuccess(result).Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
-			"output": strings.TrimSpace(string(out)),
+			"output": strings.TrimSpace(out),
 		}).Print()
 	},
 }
@@ -191,7 +192,7 @@ var networkSetCmd = &cobra.Command{
 	Short: "Configure network interface",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		iface := args[0]
+		iface := core.SanitizeInput(args[0])
 
 		ipAddr, _ := cmd.Flags().GetString("ip")
 		netmask, _ := cmd.Flags().GetString("netmask")
@@ -210,6 +211,7 @@ var networkSetCmd = &cobra.Command{
 			commands = append(commands, fmt.Sprintf("ip link set %s down", iface))
 		}
 		if ipAddr != "" {
+			ipAddr = core.SanitizeInput(ipAddr)
 			if netmask != "" {
 				commands = append(commands, fmt.Sprintf("ip addr add %s/%s dev %s", ipAddr, netmask, iface))
 			} else {
@@ -217,13 +219,14 @@ var networkSetCmd = &cobra.Command{
 			}
 		}
 		if gateway != "" {
+			gateway = core.SanitizeInput(gateway)
 			commands = append(commands, fmt.Sprintf("ip route add default via %s", gateway))
 		}
 
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"interface": iface,
-				"dry_run":   true,
+				"dry_run":  true,
 				"commands":  commands,
 			}).Print()
 			return
@@ -231,11 +234,9 @@ var networkSetCmd = &cobra.Command{
 
 		for _, command := range commands {
 			parts := strings.Fields(command)
-			execCmd := exec.Command(parts[0], parts[1:]...)
-			out, err := execCmd.CombinedOutput()
-
+			_, err := networkExecutor.Run(parts[0], parts[1:]...)
 			if err != nil {
-				output.NewError(fmt.Sprintf("command failed: %s - %s", command, strings.TrimSpace(string(out))), "NETWORK_SET_ERROR").Print()
+				output.NewError(fmt.Sprintf("command failed: %s", command), "NETWORK_SET_ERROR").Print()
 				return
 			}
 		}

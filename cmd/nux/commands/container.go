@@ -6,9 +6,12 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var containerExecutor core.Executor = &core.RealExecutor{}
 
 var containerCmd = &cobra.Command{
 	Use:   "container",
@@ -16,7 +19,6 @@ var containerCmd = &cobra.Command{
 	Long:  `Manage containers (Docker/Podman).`,
 }
 
-// detectContainerRuntime detects Docker or Podman
 func detectContainerRuntime() string {
 	runtimes := []struct {
 		name    string
@@ -47,22 +49,20 @@ var containerListCmd = &cobra.Command{
 		}
 
 		// Try JSON output first
-		listCmd := exec.Command(runtime, "ps", "-a", "--format", "{{json .}}")
-		out, err := listCmd.CombinedOutput()
+		out, err := containerExecutor.CombinedOutput(runtime, "ps", "-a", "--format", "{{json .}}")
 
 		if err != nil {
 			// Fallback to text output
-			textCmd := exec.Command(runtime, "ps", "-a")
-			textOut, _ := textCmd.CombinedOutput()
+			textOut, _ := containerExecutor.CombinedOutput(runtime, "ps", "-a")
 			output.NewSuccess(map[string]interface{}{
 				"runtime": runtime,
-				"output":  strings.TrimSpace(string(textOut)),
+				"output":  textOut,
 			}).Print()
 			return
 		}
 
 		// Parse JSON output
-		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		lines := strings.Split(out, "\n")
 		items := []map[string]interface{}{}
 
 		for _, line := range lines {
@@ -85,7 +85,7 @@ var containerRunCmd = &cobra.Command{
 	Short: "Run a container",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		image := args[0]
+		image := core.SanitizeInput(args[0])
 		runtime := detectContainerRuntime()
 
 		if runtime == "none" {
@@ -121,11 +121,10 @@ var containerRunCmd = &cobra.Command{
 			return
 		}
 
-		runCmd := exec.Command(runtime, cmdArgs...)
-		out, err := runCmd.CombinedOutput()
+		_, err := containerExecutor.CombinedOutput(runtime, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to run container: %s - %s", err.Error(), strings.TrimSpace(string(out))), "CONTAINER_RUN_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to run container: %s", err.Error()), "CONTAINER_RUN_ERROR").Print()
 			return
 		}
 
@@ -133,7 +132,6 @@ var containerRunCmd = &cobra.Command{
 			"runtime": runtime,
 			"image":   image,
 			"status":  "running",
-			"output":  strings.TrimSpace(string(out)),
 		}).Print()
 	},
 }
@@ -143,7 +141,7 @@ var containerStopCmd = &cobra.Command{
 	Short: "Stop a container",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		container := args[0]
+		container := core.SanitizeInput(args[0])
 		runtime := detectContainerRuntime()
 
 		if runtime == "none" {
@@ -163,11 +161,10 @@ var containerStopCmd = &cobra.Command{
 			return
 		}
 
-		stopCmd := exec.Command(runtime, "stop", container)
-		out, err := stopCmd.CombinedOutput()
+		_, err := containerExecutor.CombinedOutput(runtime, "stop", container)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to stop container: %s - %s", err.Error(), strings.TrimSpace(string(out))), "CONTAINER_STOP_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to stop container: %s", err.Error()), "CONTAINER_STOP_ERROR").Print()
 			return
 		}
 
@@ -184,7 +181,7 @@ var containerRemoveCmd = &cobra.Command{
 	Short: "Remove a container",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		container := args[0]
+		container := core.SanitizeInput(args[0])
 		runtime := detectContainerRuntime()
 
 		if runtime == "none" {
@@ -193,7 +190,6 @@ var containerRemoveCmd = &cobra.Command{
 		}
 
 		force, _ := cmd.Flags().GetBool("force")
-
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		cmdArgs := []string{"rm"}
@@ -212,11 +208,10 @@ var containerRemoveCmd = &cobra.Command{
 			return
 		}
 
-		rmCmd := exec.Command(runtime, cmdArgs...)
-		out, err := rmCmd.CombinedOutput()
+		_, err := containerExecutor.CombinedOutput(runtime, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to remove container: %s - %s", err.Error(), strings.TrimSpace(string(out))), "CONTAINER_REMOVE_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to remove container: %s", err.Error()), "CONTAINER_REMOVE_ERROR").Print()
 			return
 		}
 
@@ -229,14 +224,19 @@ var containerRemoveCmd = &cobra.Command{
 }
 
 func init() {
-	containerCmd.AddCommand(containerListCmd)
 	containerRunCmd.Flags().String("name", "", "Container name")
 	containerRunCmd.Flags().String("ports", "", "Port mappings (e.g., 8080:80)")
 	containerRunCmd.Flags().Bool("detach", true, "Run in background")
-	containerCmd.AddCommand(containerRunCmd)
-	containerStopCmd.Flags().Bool("force", false, "Force stop")
-	containerCmd.AddCommand(containerStopCmd)
+	containerRunCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
+	containerStopCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
 	containerRemoveCmd.Flags().Bool("force", false, "Force removal")
+	containerRemoveCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
+	containerCmd.AddCommand(containerListCmd)
+	containerCmd.AddCommand(containerRunCmd)
+	containerCmd.AddCommand(containerStopCmd)
 	containerCmd.AddCommand(containerRemoveCmd)
 	rootCmd.AddCommand(containerCmd)
 }

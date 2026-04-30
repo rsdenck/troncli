@@ -5,9 +5,12 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/rsdenck/nux/internal/core"
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var firewallExecutor core.Executor = &core.RealExecutor{}
 
 var firewallCmd = &cobra.Command{
 	Use:   "firewall",
@@ -15,7 +18,6 @@ var firewallCmd = &cobra.Command{
 	Long:  `Manage firewall rules (nftables, iptables, firewalld, ufw).`,
 }
 
-// detectFirewall detects the firewall tool available
 func detectFirewall() string {
 	tools := []struct {
 		name    string
@@ -63,17 +65,16 @@ var firewallListCmd = &cobra.Command{
 			return
 		}
 
-		fwCmd := exec.Command(command, cmdArgs...)
-		out, err := fwCmd.CombinedOutput()
+		out, err := firewallExecutor.CombinedOutput(command, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to list rules: %s - %s", err.Error(), strings.TrimSpace(string(out))), "FIREWALL_LIST_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to list rules: %s", err.Error()), "FIREWALL_LIST_ERROR").Print()
 			return
 		}
 
 		output.NewSuccess(map[string]interface{}{
 			"firewall": fw,
-			"rules":    strings.TrimSpace(string(out)),
+			"rules":    out,
 		}).Print()
 	},
 }
@@ -129,11 +130,10 @@ var firewallAddCmd = &cobra.Command{
 			return
 		}
 
-		fwCmd := exec.Command(command, cmdArgs...)
-		out, err := fwCmd.CombinedOutput()
+		_, err := firewallExecutor.CombinedOutput(command, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to add rule: %s - %s", err.Error(), strings.TrimSpace(string(out))), "FIREWALL_ADD_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to add rule: %s", err.Error()), "FIREWALL_ADD_ERROR").Print()
 			return
 		}
 
@@ -189,11 +189,10 @@ var firewallRemoveCmd = &cobra.Command{
 			return
 		}
 
-		fwCmd := exec.Command(command, cmdArgs...)
-		out, err := fwCmd.CombinedOutput()
+		_, err := firewallExecutor.CombinedOutput(command, cmdArgs...)
 
 		if err != nil {
-			output.NewError(fmt.Sprintf("failed to remove rule: %s - %s", err.Error(), strings.TrimSpace(string(out))), "FIREWALL_REMOVE_ERROR").Print()
+			output.NewError(fmt.Sprintf("failed to remove rule: %s", err.Error()), "FIREWALL_REMOVE_ERROR").Print()
 			return
 		}
 
@@ -207,13 +206,17 @@ var firewallRemoveCmd = &cobra.Command{
 }
 
 func init() {
-	firewallCmd.AddCommand(firewallListCmd)
 	firewallAddCmd.Flags().String("port", "", "Port number")
 	firewallAddCmd.Flags().String("protocol", "tcp", "Protocol (tcp/udp)")
 	firewallAddCmd.Flags().String("action", "allow", "Action (allow/deny)")
-	firewallCmd.AddCommand(firewallAddCmd)
+	firewallAddCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
 	firewallRemoveCmd.Flags().String("port", "", "Port number")
 	firewallRemoveCmd.Flags().String("protocol", "tcp", "Protocol (tcp/udp)")
+	firewallRemoveCmd.Flags().Bool("dry-run", false, "Simulate command")
+	
+	firewallCmd.AddCommand(firewallListCmd)
+	firewallCmd.AddCommand(firewallAddCmd)
 	firewallCmd.AddCommand(firewallRemoveCmd)
 	rootCmd.AddCommand(firewallCmd)
 }
