@@ -1,5 +1,14 @@
 # NUX - Linux CLI Manager
 
+```
+ ███╗   ██╗██╗   ██╗██╗  ██╗
+ ████╗  ██║██║   ██║╚██╗██╔╝
+ ██╔██╗ ██║██║   ██║ ╚███╔╝ 
+ ██║╚██╗██║██║   ██║ ██╔██╗ 
+ ██║ ╚████║╚██████╔╝██╔╝  ██╗
+ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝
+```
+
 NUX is a production-grade CLI for comprehensive Linux system administration.
 It manages system resources and provides a skill engine for extending functionality.
 
