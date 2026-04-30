@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Executor interface allows mocking for tests
+// Executor interface defines execution methods
 type Executor interface {
 	Run(name string, args ...string) (string, error)
 	RunSilent(name string, args ...string) error
@@ -39,23 +39,7 @@ func (r *RealExecutor) CombinedOutput(name string, args ...string) (string, erro
 	return strings.TrimSpace(string(output)), nil
 }
 
-// MockExecutor for testing
-type MockExecutor struct {
-	Output string
-	Err    error
-}
 
-func (m *MockExecutor) Run(name string, args ...string) (string, error) {
-	return m.Output, m.Err
-}
-
-func (m *MockExecutor) RunSilent(name string, args ...string) error {
-	return m.Err
-}
-
-func (m *MockExecutor) CombinedOutput(name string, args ...string) (string, error) {
-	return m.Output, m.Err
-}
 
 // SanitizeInput prevents shell injection attacks
 func SanitizeInput(input string) string {
