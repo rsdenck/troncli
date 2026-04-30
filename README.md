@@ -1,120 +1,109 @@
-<div align="center"> 
-  
- <img src="assets/banner.jpg" width="100%" alt="TRONCLI" /> 
-  
- <table> 
- <tr> 
- <td align="left" width="55%"> 
-  
- ### TRONCLI | System Administration TUI 
-  
- <br> 
-  
- **Production Grade Linux Tool** 
- Real-time Monitoring | LVM Management | Security Auditing 
-  
- <br> 
-  
- _"Building systems that do not wake people up at 3 AM."_ 
-  
- </td> 
- <td align="center" width="45%"> 
- <h3>TRONCLI<br>INTERFACE</h3> 
- </td> 
- </tr> 
- </table> 
-  
- </div> 
-  
- ### Status 
-  
- <div align="center"> 
-   <img src="https://img.shields.io/badge/Go-1.22+-000000?style=for-the-badge&logo=go&logoColor=00d9ff" /> 
-   <img src="https://img.shields.io/badge/Platform-Linux-000000?style=for-the-badge&logo=linux&logoColor=00d9ff" /> 
-   <img src="https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logoColor=00d9ff" /> 
-   <img src="https://img.shields.io/badge/Build-Passing-000000?style=for-the-badge&logoColor=00d9ff" /> 
- </div> 
-  
- <br> 
-  
- ### Core Modules 
-  
- <div align="center"> 
-  
- <table> 
- <tr> 
- <td valign="top" width="50%"> 
-  
- <h3>System Dashboard</h3> 
-  
- <img src="https://img.shields.io/badge/CPU_Usage-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/Memory_Stats-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/Load_Average-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/Network_IO-000000?style=for-the-badge&logoColor=00d9ff" /> 
-  
- <hr> 
-  
- <h3>LVM Manager</h3> 
-  
- <img src="https://img.shields.io/badge/Physical_Volumes-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/Volume_Groups-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/Logical_Volumes-000000?style=for-the-badge&logoColor=00d9ff" /> 
-  
- </td> 
-  
- <td valign="top" width="50%"> 
-  
- <h3>Network Matrix</h3> 
-  
- <img src="https://img.shields.io/badge/Interface_Stats-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/RX_TX_Rates-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/Socket_States-000000?style=for-the-badge&logoColor=00d9ff" /> 
-  
- <hr> 
-  
- <h3>Security Audit</h3> 
-  
- <img src="https://img.shields.io/badge/User_Enum-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/SSH_Sessions-000000?style=for-the-badge&logoColor=00d9ff" /> 
- <img src="https://img.shields.io/badge/Audit_Logs-000000?style=for-the-badge&logoColor=00d9ff" /> 
-  
- </td> 
- </tr> 
- </table> 
-  
- </div> 
-  
- ### Installation (Bash) 
-  
- To install the latest version automatically: 
-  
- ```bash 
- curl -sS https://raw.githubusercontent.com/rsdenck/troncli/main/setup-tron.sh | bash 
- ``` 
-  
- ### Manual Installation 
-  
- ```bash 
- git clone https://github.com/rsdenck/troncli.git 
- cd troncli 
- go build -ldflags="-s -w" -o troncli cmd/troncli/main.go 
- ./troncli 
- ``` 
-  
- ### Architecture 
-  
- The system follows Clean Architecture principles with strict separation of concerns. 
-  
- ```text 
- cmd/ 
-   troncli/       # Entry Point 
- internal/ 
-   core/          # Domain Logic & Ports 
-   modules/       # Implementations (Linux Specific) 
-   ui/            # TUI Layer (tview/tcell) 
- ``` 
-  
- ### Security 
-  
- Please report vulnerabilities to ranlens.denck@protonmnail.com. 
- See [SECURITY.md](SECURITY.md) for details.
+# NUX - Linux CLI Manager
+
+NUX is a powerful CLI Master/Manager for Linux that can incorporate functionalities from other CLIs through **Skills**.
+
+## Concept
+
+NUX acts as a **CLI Manager** - it doesn't just manage your system, it manages other CLIs! Through the skill system, you can:
+- Install other CLI tools as "skills"
+- Configure API keys and credentials (stored securely in vault)
+- Use NUX as a proxy to control other tools
+
+## Features
+
+- **Multi-distribution support**: Works on any Linux (apt, dnf, yum, pacman, apk, zypper)
+- **Skill Engine**: 145+ pre-defined skills ready to install
+- **Vault System**: Secure storage for configurations and API keys (`~/.skills/.nux.json`)
+- **Ollama Integration**: AI agent with `qwen3-coder` model
+- **Core Linux Management**: Network, disk, LVM, NFS, services, firewall, users
+
+## Installation
+
+### From Release (Recommended)
+```bash
+# Download from https://github.com/rsdenck/nux/releases
+# Debian/Ubuntu
+dpkg -i nux_*.deb
+
+# RHEL/Fedora
+rpm -ivh nux-*.rpm
+
+# Arch
+pacman -U nux-*.pkg.tar.zst
+```
+
+### From Source
+```bash
+git clone https://github.com/rsdenck/nux.git
+cd nux
+go build -o nux ./cmd/nux
+sudo mv nux /usr/local/bin/
+```
+
+## Quick Start
+
+```bash
+# First-time setup
+nux onboard
+
+# List available skills
+nux skill list
+
+# Install a skill (e.g., docker)
+nux skill install docker
+
+# Enable the skill
+nux skill enable docker
+
+# Use Ollama AI
+nux agent ask "create LVM with 50GB"
+```
+
+## Skill System
+
+Skills are defined as `.md` files in the `skills/` directory. Each skill contains:
+- Repository URL
+- Description
+- Install command
+- Type (shell, tool, cloud, etc.)
+
+### Example Skills
+- **Shell**: bash, zsh, fish, tmux
+- **System**: docker, kubectl, systemd, lvm
+- **Network**: curl, wget, nmap, tcpdump
+- **Cloud**: aws, gcloud, azure, terraform
+- **AI**: ollama, openai, claude, aider
+
+## Vault Configuration
+
+NUX uses a vault file at `~/.skills/.nux.json` (permissions: 0600):
+```json
+{
+  "version": "1.0.0",
+  "installed_skills": ["docker", "kubectl"],
+  "enabled_skills": ["docker"],
+  "api_keys": {"github": "ghp_xxxxx"},
+  "ollama": {
+    "host": "http://localhost:11434",
+    "model": "qwen3-coder",
+    "enabled": true
+  }
+}
+```
+
+## Multi-Distribution Support
+
+NUX automatically detects your distribution and uses the appropriate tools:
+- **Package managers**: apt, dnf, yum, pacman, apk, zypper
+- **Init systems**: systemd, openrc, sysvinit, runit
+- **Firewalls**: nftables, iptables, firewalld, ufw
+
+## License
+
+MIT
+
+## Repository
+
+- **GitHub**: https://github.com/rsdenck/nux
+- **Issues**: https://github.com/rsdenck/nux/issues
+- **Releases**: https://github.com/rsdenck/nux/releases
