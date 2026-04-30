@@ -25,13 +25,13 @@ func detectContainerRuntime() string {
 		{"docker", "docker"},
 		{"podman", "podman"},
 	}
-	
+
 	for _, r := range runtimes {
 		if _, err := exec.LookPath(r.command); err == nil {
 			return r.name
 		}
 	}
-	
+
 	return "none"
 }
 
@@ -40,16 +40,16 @@ var containerListCmd = &cobra.Command{
 	Short: "List containers",
 	Run: func(cmd *cobra.Command, args []string) {
 		runtime := detectContainerRuntime()
-		
+
 		if runtime == "none" {
 			output.NewError("no container runtime found (docker/podman)", "CONTAINER_RUNTIME_MISSING").Print()
 			return
 		}
-		
+
 		// Try JSON output first
 		listCmd := exec.Command(runtime, "ps", "-a", "--format", "{{json .}}")
 		out, err := listCmd.CombinedOutput()
-		
+
 		if err != nil {
 			// Fallback to text output
 			textCmd := exec.Command(runtime, "ps", "-a")
@@ -60,22 +60,22 @@ var containerListCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		// Parse JSON output
 		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 		items := []map[string]interface{}{}
-		
+
 		for _, line := range lines {
 			if line == "" {
 				continue
 			}
-			
+
 			var container map[string]interface{}
 			if err := json.Unmarshal([]byte(line), &container); err == nil {
 				items = append(items, container)
 			}
 		}
-		
+
 		output.NewList(items, len(items)).WithMessage("Container list").Print()
 	},
 }
@@ -87,18 +87,18 @@ var containerRunCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		image := args[0]
 		runtime := detectContainerRuntime()
-		
+
 		if runtime == "none" {
 			output.NewError("no container runtime found (docker/podman)", "CONTAINER_RUNTIME_MISSING").Print()
 			return
 		}
-		
+
 		name, _ := cmd.Flags().GetString("name")
 		ports, _ := cmd.Flags().GetString("ports")
 		detach, _ := cmd.Flags().GetBool("detach")
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		cmdArgs := []string{"run"}
 		if detach {
 			cmdArgs = append(cmdArgs, "-d")
@@ -110,7 +110,7 @@ var containerRunCmd = &cobra.Command{
 			cmdArgs = append(cmdArgs, "-p", ports)
 		}
 		cmdArgs = append(cmdArgs, image)
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"runtime": runtime,
@@ -120,15 +120,15 @@ var containerRunCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		runCmd := exec.Command(runtime, cmdArgs...)
 		out, err := runCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to run container: %s - %s", err.Error(), strings.TrimSpace(string(out))), "CONTAINER_RUN_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"runtime": runtime,
 			"image":   image,
@@ -145,14 +145,14 @@ var containerStopCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		container := args[0]
 		runtime := detectContainerRuntime()
-		
+
 		if runtime == "none" {
 			output.NewError("no container runtime found (docker/podman)", "CONTAINER_RUNTIME_MISSING").Print()
 			return
 		}
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"runtime":   runtime,
@@ -162,15 +162,15 @@ var containerStopCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		stopCmd := exec.Command(runtime, "stop", container)
 		out, err := stopCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to stop container: %s - %s", err.Error(), strings.TrimSpace(string(out))), "CONTAINER_STOP_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"runtime":   runtime,
 			"container": container,
@@ -186,22 +186,22 @@ var containerRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		container := args[0]
 		runtime := detectContainerRuntime()
-		
+
 		if runtime == "none" {
 			output.NewError("no container runtime found (docker/podman)", "CONTAINER_RUNTIME_MISSING").Print()
 			return
 		}
-		
+
 		force, _ := cmd.Flags().GetBool("force")
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		cmdArgs := []string{"rm"}
 		if force {
 			cmdArgs = append(cmdArgs, "-f")
 		}
 		cmdArgs = append(cmdArgs, container)
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"runtime":   runtime,
@@ -211,15 +211,15 @@ var containerRemoveCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		rmCmd := exec.Command(runtime, cmdArgs...)
 		out, err := rmCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to remove container: %s - %s", err.Error(), strings.TrimSpace(string(out))), "CONTAINER_REMOVE_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"runtime":   runtime,
 			"container": container,

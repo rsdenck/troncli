@@ -223,8 +223,8 @@ var networkSetCmd = &cobra.Command{
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"interface": iface,
-				"dry_run":  true,
-				"commands": commands,
+				"dry_run":   true,
+				"commands":  commands,
 			}).Print()
 			return
 		}

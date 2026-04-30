@@ -321,7 +321,7 @@ func readTopProcesses() []ports.ProcessInfo {
 		if elapsedTicks <= 0 {
 			elapsedTicks = 1
 		}
-		
+
 		// Usage as percentage of one core (can exceed 100%? No, because totalTime is ticks)
 		// Wait, if multi-core, totalTime can increase faster than wall clock?
 		// No, ticks are ticks.

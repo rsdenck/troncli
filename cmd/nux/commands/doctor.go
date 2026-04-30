@@ -1,7 +1,6 @@
 package commands
 
 import (
-
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )

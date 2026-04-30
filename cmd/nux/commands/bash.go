@@ -21,27 +21,27 @@ var bashExecCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		command := args[0]
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
-				"command":  command,
+				"command": command,
 				"dry_run": true,
 				"shell":   "bash",
 			}).Print()
 			return
 		}
-		
+
 		// Execute command via bash -c
 		bashCmd := exec.Command("bash", "-c", command)
 		out, err := bashCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("command failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "BASH_EXEC_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"command": command,
 			"output":  strings.TrimSpace(string(out)),
@@ -56,9 +56,9 @@ var bashScriptCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		scriptFile := args[0]
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"script":  scriptFile,
@@ -67,20 +67,20 @@ var bashScriptCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		// Execute script file
 		bashCmd := exec.Command("bash", scriptFile)
 		out, err := bashCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("script failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "BASH_SCRIPT_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
-			"script":  scriptFile,
-			"output":  strings.TrimSpace(string(out)),
-			"status":  "executed",
+			"script": scriptFile,
+			"output": strings.TrimSpace(string(out)),
+			"status": "executed",
 		}).Print()
 	},
 }

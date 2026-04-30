@@ -83,7 +83,7 @@ func (m *DockerManager) GetContainerLogs(id string, tail int) (string, error) {
 		args = append(args, fmt.Sprintf("--tail=%d", tail))
 	}
 	args = append(args, id)
-	
+
 	output, err := exec.Command("docker", args...).CombinedOutput()
 	if err != nil {
 		return "", err

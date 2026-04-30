@@ -87,7 +87,7 @@ func RunNativePortScan(target string, customPorts []int) ([]ports.PortScanResult
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			address := fmt.Sprintf("%s:%d", target, p)
+			address := net.JoinHostPort(target, fmt.Sprintf("%d", p))
 			conn, err := net.DialTimeout("tcp", address, timeout)
 			if err == nil {
 				conn.Close()

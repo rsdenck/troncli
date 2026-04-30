@@ -30,13 +30,13 @@ func detectPackageManager() string {
 		{"apk", "apk"},
 		{"zypper", "zypper"},
 	}
-	
+
 	for _, m := range managers {
 		if _, err := exec.LookPath(m.command); err == nil {
 			return m.name
 		}
 	}
-	
+
 	return "unknown"
 }
 
@@ -47,10 +47,10 @@ var pkgInstallCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgManager := detectPackageManager()
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		var command string
 		var cmdArgs []string
-		
+
 		switch pkgManager {
 		case "apt":
 			command = "apt"
@@ -74,30 +74,30 @@ var pkgInstallCmd = &cobra.Command{
 			output.NewError("unsupported package manager", "PKG_UNSUPPORTED").Print()
 			return
 		}
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
-				"packages":       args,
+				"packages":        args,
 				"package_manager": pkgManager,
-				"dry_run":        true,
-				"command":        fmt.Sprintf("%s %s", command, strings.Join(cmdArgs, " ")),
+				"dry_run":         true,
+				"command":         fmt.Sprintf("%s %s", command, strings.Join(cmdArgs, " ")),
 			}).Print()
 			return
 		}
-		
+
 		execCmd := exec.Command(command, cmdArgs...)
 		out, err := execCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("install failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_INSTALL_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
-			"packages":       args,
+			"packages":        args,
 			"package_manager": pkgManager,
-			"status":         "installed",
-			"output":         strings.TrimSpace(string(out)),
+			"status":          "installed",
+			"output":          strings.TrimSpace(string(out)),
 		}).Print()
 	},
 }
@@ -108,10 +108,10 @@ var pkgUpdateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgManager := detectPackageManager()
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		var command string
 		var cmdArgs []string
-		
+
 		switch pkgManager {
 		case "apt":
 			command = "apt"
@@ -135,28 +135,28 @@ var pkgUpdateCmd = &cobra.Command{
 			output.NewError("unsupported package manager", "PKG_UNSUPPORTED").Print()
 			return
 		}
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"package_manager": pkgManager,
-				"dry_run":        true,
-				"command":        fmt.Sprintf("%s %s", command, strings.Join(cmdArgs, " ")),
+				"dry_run":         true,
+				"command":         fmt.Sprintf("%s %s", command, strings.Join(cmdArgs, " ")),
 			}).Print()
 			return
 		}
-		
+
 		execCmd := exec.Command(command, cmdArgs...)
 		out, err := execCmd.CombinedOutput()
-		
+
 		if err != nil && pkgManager != "dnf" && pkgManager != "yum" {
 			output.NewError(fmt.Sprintf("update failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_UPDATE_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"package_manager": pkgManager,
-			"status":         "updated",
-			"output":         strings.TrimSpace(string(out)),
+			"status":          "updated",
+			"output":          strings.TrimSpace(string(out)),
 		}).Print()
 	},
 }
@@ -166,10 +166,10 @@ var pkgListCmd = &cobra.Command{
 	Short: "List installed packages",
 	Run: func(cmd *cobra.Command, args []string) {
 		pkgManager := detectPackageManager()
-		
+
 		var command string
 		var cmdArgs []string
-		
+
 		switch pkgManager {
 		case "apt":
 			command = "dpkg"
@@ -190,18 +190,18 @@ var pkgListCmd = &cobra.Command{
 			output.NewError("unsupported package manager", "PKG_UNSUPPORTED").Print()
 			return
 		}
-		
+
 		execCmd := exec.Command(command, cmdArgs...)
 		out, err := execCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("list failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_LIST_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"package_manager": pkgManager,
-			"output":         strings.TrimSpace(string(out)),
+			"output":          strings.TrimSpace(string(out)),
 		}).Print()
 	},
 }
@@ -213,10 +213,10 @@ var pkgSearchCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		query := args[0]
 		pkgManager := detectPackageManager()
-		
+
 		var command string
 		var cmdArgs []string
-		
+
 		switch pkgManager {
 		case "apt":
 			command = "apt"
@@ -240,19 +240,19 @@ var pkgSearchCmd = &cobra.Command{
 			output.NewError("unsupported package manager", "PKG_UNSUPPORTED").Print()
 			return
 		}
-		
+
 		execCmd := exec.Command(command, cmdArgs...)
 		out, err := execCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("search failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "PKG_SEARCH_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
-			"query":          query,
+			"query":           query,
 			"package_manager": pkgManager,
-			"output":         strings.TrimSpace(string(out)),
+			"output":          strings.TrimSpace(string(out)),
 		}).Print()
 	},
 }
@@ -263,7 +263,7 @@ func init() {
 	pkgCmd.AddCommand(pkgListCmd)
 	pkgCmd.AddCommand(pkgSearchCmd)
 	rootCmd.AddCommand(pkgCmd)
-	
+
 	// Set GOOS for detection
 	_ = runtime.GOOS
 }

@@ -29,11 +29,11 @@ var remoteListCmd = &cobra.Command{
 			return
 		}
 		defer file.Close()
-		
+
 		items := []map[string]interface{}{}
 		scanner := bufio.NewScanner(file)
 		currentHost := ""
-		
+
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			if strings.HasPrefix(strings.ToLower(line), "host ") {
@@ -47,7 +47,7 @@ var remoteListCmd = &cobra.Command{
 				currentHost = ""
 			}
 		}
-		
+
 		output.NewList(items, len(items)).WithMessage("Remote connections (SSH config)").Print()
 	},
 }
@@ -59,9 +59,9 @@ var remoteExecCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		host := args[0]
 		command := strings.Join(args[1:], " ")
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"host":    host,
@@ -71,15 +71,15 @@ var remoteExecCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		sshCmd := exec.Command("ssh", host, command)
 		out, err := sshCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("remote execution failed: %s - %s", err.Error(), strings.TrimSpace(string(out))), "REMOTE_EXEC_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"host":    host,
 			"command": command,

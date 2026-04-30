@@ -87,7 +87,7 @@ var auditChangesCmd = &cobra.Command{
 		}
 
 		paths := []string{"/etc", "/var"}
-		changes, err := manager.AnalyzeFileChanges(paths, 24 * time.Hour)
+		changes, err := manager.AnalyzeFileChanges(paths, 24*time.Hour)
 		if err != nil {
 			output.NewError(err.Error(), "ERR_CHANGES").Print()
 			os.Exit(1)

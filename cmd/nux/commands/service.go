@@ -32,14 +32,14 @@ var serviceListCmd = &cobra.Command{
 		// Use systemctl to list services with proper parsing
 		systemctlCmd := exec.Command("systemctl", "list-units", "--type=service", "--all", "--no-pager")
 		out, err := systemctlCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to list services: %s", strings.TrimSpace(string(out))), "SERVICE_LIST_ERROR").Print()
 			return
 		}
-		
+
 		services := parseServiceOutput(string(out))
-		
+
 		// Convert to items for output formatter
 		items := []map[string]interface{}{}
 		for _, s := range services {
@@ -51,7 +51,7 @@ var serviceListCmd = &cobra.Command{
 				"ports":   s.Ports,
 			})
 		}
-		
+
 		output.NewList(items, len(items)).WithMessage("Service list").Print()
 	},
 }
@@ -59,22 +59,22 @@ var serviceListCmd = &cobra.Command{
 func parseServiceOutput(out string) []ServiceInfo {
 	services := []ServiceInfo{}
 	lines := strings.Split(out, "\n")
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "UNIT") || strings.HasPrefix(line, "●") {
 			continue
 		}
-		
+
 		// Parse systemctl list-units output
 		// Format: UNIT LOAD ACTIVE SUB DESCRIPTION
 		fields := strings.Fields(line)
 		if len(fields) < 4 {
 			continue
 		}
-		
+
 		name := strings.TrimSuffix(fields[0], ".service")
-		
+
 		// Get state (ACTIVE column)
 		state := fields[2]
 		if state == "active" {
@@ -82,13 +82,13 @@ func parseServiceOutput(out string) []ServiceInfo {
 		} else if state == "inactive" || state == "dead" {
 			state = "inactive"
 		}
-		
+
 		// Check if enabled
 		enabled := "no"
 		if state == "active" {
 			enabled = "yes"
 		}
-		
+
 		// Try to get PID
 		pid := "-"
 		pidCmd := exec.Command("systemctl", "show", name, "--property=MainPID", "--value")
@@ -97,10 +97,10 @@ func parseServiceOutput(out string) []ServiceInfo {
 		if pidStr != "" && pidStr != "0" {
 			pid = pidStr
 		}
-		
+
 		// Ports (simplified - would need ss/netstat for real implementation)
 		ports := "-"
-		
+
 		services = append(services, ServiceInfo{
 			Name:    name,
 			State:   state,
@@ -109,7 +109,7 @@ func parseServiceOutput(out string) []ServiceInfo {
 			Ports:   ports,
 		})
 	}
-	
+
 	return services
 }
 
@@ -119,20 +119,20 @@ var serviceStatusCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		service := args[0]
-		
+
 		systemctlCmd := exec.Command("systemctl", "status", service)
 		out, _ := systemctlCmd.CombinedOutput()
-		
+
 		// Try to parse as JSON if available
 		jsonCmd := exec.Command("systemctl", "show", service, "--output=json")
 		jsonOut, _ := jsonCmd.CombinedOutput()
-		
+
 		var jsonData interface{}
 		if jsonErr := json.Unmarshal(jsonOut, &jsonData); jsonErr == nil {
 			output.NewSuccess(jsonData).Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"service": service,
 			"output":  strings.TrimSpace(string(out)),
@@ -146,9 +146,9 @@ var serviceStartCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		service := args[0]
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"service": service,
@@ -158,15 +158,15 @@ var serviceStartCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		systemctlCmd := exec.Command("systemctl", "start", service)
 		out, err := systemctlCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to start service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_START_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"service": service,
 			"action":  "start",
@@ -181,9 +181,9 @@ var serviceStopCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		service := args[0]
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"service": service,
@@ -193,15 +193,15 @@ var serviceStopCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		systemctlCmd := exec.Command("systemctl", "stop", service)
 		out, err := systemctlCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to stop service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_STOP_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"service": service,
 			"action":  "stop",
@@ -216,9 +216,9 @@ var serviceEnableCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		service := args[0]
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"service": service,
@@ -228,15 +228,15 @@ var serviceEnableCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		systemctlCmd := exec.Command("systemctl", "enable", service)
 		out, err := systemctlCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to enable service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_ENABLE_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"service": service,
 			"action":  "enable",
@@ -251,9 +251,9 @@ var serviceDisableCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		service := args[0]
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"service": service,
@@ -263,15 +263,15 @@ var serviceDisableCmd = &cobra.Command{
 			}).Print()
 			return
 		}
-		
+
 		systemctlCmd := exec.Command("systemctl", "disable", service)
 		out, err := systemctlCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to disable service: %s - %s", err.Error(), strings.TrimSpace(string(out))), "SERVICE_DISABLE_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"service": service,
 			"action":  "disable",

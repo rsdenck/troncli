@@ -59,7 +59,7 @@ var agentStatusCmd = &cobra.Command{
 		fmt.Printf("Ollama Host: %s\n", v.Ollama.Host)
 		fmt.Printf("Model: %s\n", v.Ollama.Model)
 		fmt.Printf("Enabled: %v\n", v.Ollama.Enabled)
-		
+
 		// Test connection
 		resp, err := http.Get(v.Ollama.Host + "/api/tags")
 		if err != nil {

@@ -27,7 +27,7 @@ var skillInstallCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		skillName := args[0]
-		
+
 		s, err := skill.LoadSkillFromMD(skillName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -36,7 +36,7 @@ var skillInstallCmd = &cobra.Command{
 
 		fmt.Printf("Installing skill: %s\n", skillName)
 		fmt.Printf("Description: %s\n", s.Description)
-		
+
 		v, err := skill.LoadVault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading vault: %v\n", err)
@@ -65,7 +65,7 @@ var skillInfoCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		skillName := args[0]
-		
+
 		s, err := skill.LoadSkillFromMD(skillName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -81,7 +81,7 @@ var skillInfoCmd = &cobra.Command{
 		fmt.Printf("Skill: %s\n", s.Name)
 		fmt.Printf("Description: %s\n", s.Description)
 		fmt.Printf("Repo: %s\n", s.Repo)
-		fmt.Printf("Install: %s\n", s.Install)
+		fmt.Printf("Install: %s\n", s.InstallCmd)
 		fmt.Printf("Commands: %s\n", s.Commands)
 		fmt.Printf("Type: %s\n", s.Type)
 	},
@@ -147,7 +147,7 @@ var skillEnableCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		skillName := args[0]
-		
+
 		v, err := skill.LoadVault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading vault: %v\n", err)
@@ -180,7 +180,7 @@ var skillSyncCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Syncing skills...")
 		fmt.Println("Checking for updates...")
-		
+
 		v, err := skill.LoadVault()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading vault: %v\n", err)

@@ -30,7 +30,7 @@ var systemInfoCmd = &cobra.Command{
 			"uptime":   getUptime(),
 			"load":     getLoadAverage(),
 		}
-		
+
 		output.NewSuccess(info).Print()
 	},
 }
@@ -41,12 +41,12 @@ var systemUptimeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		uptimeCmd := exec.Command("uptime")
 		out, err := uptimeCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to get uptime: %s", strings.TrimSpace(string(out))), "SYSTEM_UPTIME_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"uptime": strings.TrimSpace(string(out)),
 		}).Print()
@@ -90,14 +90,14 @@ func getOSInfo() string {
 			}
 		}
 	}
-	
+
 	// Fallback to lsb_release
 	lsbCmd := exec.Command("lsb_release", "-ds")
 	out, err := lsbCmd.CombinedOutput()
 	if err == nil {
 		return strings.TrimSpace(strings.Trim(string(out), "\""))
 	}
-	
+
 	return "unknown"
 }
 

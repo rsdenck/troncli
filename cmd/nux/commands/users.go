@@ -22,22 +22,22 @@ var usersListCmd = &cobra.Command{
 		// Use getent passwd to list users
 		getentCmd := exec.Command("getent", "passwd")
 		out, err := getentCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to list users: %s", strings.TrimSpace(string(out))), "USERS_LIST_ERROR").Print()
 			return
 		}
-		
+
 		// Parse output
 		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 		items := []map[string]interface{}{}
-		
+
 		for _, line := range lines {
 			parts := strings.Split(line, ":")
 			if len(parts) < 7 {
 				continue
 			}
-			
+
 			item := map[string]interface{}{
 				"username": parts[0],
 				"uid":      parts[2],
@@ -47,7 +47,7 @@ var usersListCmd = &cobra.Command{
 			}
 			items = append(items, item)
 		}
-		
+
 		output.NewList(items, len(items)).WithMessage("User list").Print()
 	},
 }
@@ -58,13 +58,13 @@ var usersAddCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		username := args[0]
-		
+
 		createHome, _ := cmd.Flags().GetBool("create-home")
 		shell, _ := cmd.Flags().GetString("shell")
 		group, _ := cmd.Flags().GetString("group")
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		cmdArgs := []string{}
 		if createHome {
 			cmdArgs = append(cmdArgs, "-m")
@@ -76,24 +76,24 @@ var usersAddCmd = &cobra.Command{
 			cmdArgs = append(cmdArgs, "-g", group)
 		}
 		cmdArgs = append(cmdArgs, username)
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"username": username,
-				"dry_run": true,
+				"dry_run":  true,
 				"command":  fmt.Sprintf("useradd %s", strings.Join(cmdArgs, " ")),
 			}).Print()
 			return
 		}
-		
+
 		useraddCmd := exec.Command("useradd", cmdArgs...)
 		out, err := useraddCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to add user: %s - %s", err.Error(), strings.TrimSpace(string(out))), "USERS_ADD_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"username": username,
 			"status":   "created",
@@ -107,34 +107,34 @@ var usersDeleteCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		username := args[0]
-		
+
 		removeHome, _ := cmd.Flags().GetBool("remove-home")
-		
+
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		cmdArgs := []string{}
 		if removeHome {
 			cmdArgs = append(cmdArgs, "-r")
 		}
 		cmdArgs = append(cmdArgs, username)
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"username": username,
-				"dry_run": true,
+				"dry_run":  true,
 				"command":  fmt.Sprintf("userdel %s", strings.Join(cmdArgs, " ")),
 			}).Print()
 			return
 		}
-		
+
 		userdelCmd := exec.Command("userdel", cmdArgs...)
 		out, err := userdelCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to delete user: %s - %s", err.Error(), strings.TrimSpace(string(out))), "USERS_DELETE_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"username": username,
 			"status":   "deleted",
@@ -148,21 +148,21 @@ var groupsListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		getentCmd := exec.Command("getent", "group")
 		out, err := getentCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to list groups: %s", strings.TrimSpace(string(out))), "USERS_GROUPS_ERROR").Print()
 			return
 		}
-		
+
 		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 		items := []map[string]interface{}{}
-		
+
 		for _, line := range lines {
 			parts := strings.Split(line, ":")
 			if len(parts) < 4 {
 				continue
 			}
-			
+
 			item := map[string]interface{}{
 				"groupname": parts[0],
 				"gid":       parts[2],
@@ -170,7 +170,7 @@ var groupsListCmd = &cobra.Command{
 			}
 			items = append(items, item)
 		}
-		
+
 		output.NewList(items, len(items)).WithMessage("Group list").Print()
 	},
 }

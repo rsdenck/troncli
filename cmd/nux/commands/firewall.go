@@ -26,13 +26,13 @@ func detectFirewall() string {
 		{"firewalld", "firewall-cmd"},
 		{"ufw", "ufw"},
 	}
-	
+
 	for _, t := range tools {
 		if _, err := exec.LookPath(t.command); err == nil {
 			return t.name
 		}
 	}
-	
+
 	return "unknown"
 }
 
@@ -41,10 +41,10 @@ var firewallListCmd = &cobra.Command{
 	Short: "List firewall rules",
 	Run: func(cmd *cobra.Command, args []string) {
 		fw := detectFirewall()
-		
+
 		var command string
 		var cmdArgs []string
-		
+
 		switch fw {
 		case "nft":
 			command = "nft"
@@ -62,15 +62,15 @@ var firewallListCmd = &cobra.Command{
 			output.NewError("no supported firewall found", "FIREWALL_UNSUPPORTED").Print()
 			return
 		}
-		
+
 		fwCmd := exec.Command(command, cmdArgs...)
 		out, err := fwCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to list rules: %s - %s", err.Error(), strings.TrimSpace(string(out))), "FIREWALL_LIST_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"firewall": fw,
 			"rules":    strings.TrimSpace(string(out)),
@@ -85,18 +85,18 @@ var firewallAddCmd = &cobra.Command{
 		port, _ := cmd.Flags().GetString("port")
 		protocol, _ := cmd.Flags().GetString("protocol")
 		action, _ := cmd.Flags().GetString("action")
-		
+
 		if port == "" {
 			output.NewError("port is required", "FIREWALL_PORT_REQUIRED").Print()
 			return
 		}
-		
+
 		fw := detectFirewall()
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		var command string
 		var cmdArgs []string
-		
+
 		switch fw {
 		case "nft":
 			command = "nft"
@@ -119,24 +119,24 @@ var firewallAddCmd = &cobra.Command{
 			output.NewError("no supported firewall found", "FIREWALL_UNSUPPORTED").Print()
 			return
 		}
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"firewall": fw,
-				"dry_run": true,
+				"dry_run":  true,
 				"command":  fmt.Sprintf("%s %s", command, strings.Join(cmdArgs, " ")),
 			}).Print()
 			return
 		}
-		
+
 		fwCmd := exec.Command(command, cmdArgs...)
 		out, err := fwCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to add rule: %s - %s", err.Error(), strings.TrimSpace(string(out))), "FIREWALL_ADD_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"firewall": fw,
 			"port":     port,
@@ -153,18 +153,18 @@ var firewallRemoveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		port, _ := cmd.Flags().GetString("port")
 		protocol, _ := cmd.Flags().GetString("protocol")
-		
+
 		if port == "" {
 			output.NewError("port is required", "FIREWALL_PORT_REQUIRED").Print()
 			return
 		}
-		
+
 		fw := detectFirewall()
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		
+
 		var command string
 		var cmdArgs []string
-		
+
 		switch fw {
 		case "iptables":
 			command = "iptables"
@@ -179,24 +179,24 @@ var firewallRemoveCmd = &cobra.Command{
 			output.NewError("firewall does not support rule removal or is unsupported", "FIREWALL_REMOVE_UNSUPPORTED").Print()
 			return
 		}
-		
+
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"firewall": fw,
-				"dry_run": true,
+				"dry_run":  true,
 				"command":  fmt.Sprintf("%s %s", command, strings.Join(cmdArgs, " ")),
 			}).Print()
 			return
 		}
-		
+
 		fwCmd := exec.Command(command, cmdArgs...)
 		out, err := fwCmd.CombinedOutput()
-		
+
 		if err != nil {
 			output.NewError(fmt.Sprintf("failed to remove rule: %s - %s", err.Error(), strings.TrimSpace(string(out))), "FIREWALL_REMOVE_ERROR").Print()
 			return
 		}
-		
+
 		output.NewSuccess(map[string]interface{}{
 			"firewall": fw,
 			"port":     port,

@@ -22,10 +22,10 @@ var onboardCmd = &cobra.Command{
 		vault, err := skill.LoadVault()
 		if err != nil {
 			vault = &skill.Vault{
-				Version:        "1.0.0",
+				Version:         "1.0.0",
 				InstalledSkills: []string{},
-				EnabledSkills:  []string{},
-				APIKeys:        make(map[string]string),
+				EnabledSkills:   []string{},
+				APIKeys:         make(map[string]string),
 			}
 		}
 
@@ -106,9 +106,9 @@ var onboardCmd = &cobra.Command{
 
 		output.NewSuccess(map[string]interface{}{
 			"onboard_completed": true,
-			"skills_enabled":   enabled,
-			"skills_skipped":   skipped,
-			"total_skills":     len(files),
+			"skills_enabled":    enabled,
+			"skills_skipped":    skipped,
+			"total_skills":      len(files),
 		}).Print()
 
 		output.NewInfo("\nOnboard completed! You can now use NUX.").Print()
