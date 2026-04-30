@@ -29,6 +29,7 @@ archives:
     files:
       - LICENSE
       - README.md
+      - docs/
 
 checksum:
   name_template: 'checksums.txt'
@@ -45,11 +46,11 @@ changelog:
       - '^test:'
       - '^chore:'
 
-nfpms:
+nfpm:
   - file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     homepage: https://github.com/rsdenck/nux
     maintainer: "Ranlens Denck <piptr@protonmail.com>"
-    description: "NUX - Linux CLI Manager for all distributions"
+    description: "NUX - Production-Grade Linux CLI Manager"
     license: "MIT"
     formats:
       - deb
@@ -61,7 +62,12 @@ nfpms:
         dst: /usr/share/doc/nux/LICENSE
       - src: README.md
         dst: /usr/share/doc/nux/README.md
+      - src: docs/index.html
+        dst: /usr/share/nux/docs/index.html
 
 release:
   draft: false
   prerelease: false
+  github:
+    owner: rsdenck
+    name: nux
