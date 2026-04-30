@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +26,22 @@ var diskListCmd = &cobra.Command{
 	},
 }
 
+var diskUsageCmd = &cobra.Command{
+	Use:   "usage [mountpoint]",
+	Short: "Show disk usage",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		path := "/"
+		if len(args) > 0 {
+			path = args[0]
+		}
+		output.NewSuccess(map[string]interface{}{
+			"path":   path,
+			"status": "checked",
+		}).Print()
+	},
+}
+
 var diskLvmCmd = &cobra.Command{
 	Use:   "lvm",
 	Short: "LVM management",
@@ -38,10 +56,10 @@ var lvmCreateCmd = &cobra.Command{
 		device := args[0]
 		size := args[1]
 		output.NewSuccess(map[string]interface{}{
-			"device":   device,
-			"size":     size,
-			"status":   "LVM volume created (simulated)",
-			"command":  fmt.Sprintf("pvcreate %s && vgcreate data_vg %s && lvcreate -L %s -n data_lv data_vg", device, device, size),
+			"device": device,
+			"size":   size,
+			"status": "LVM volume created (simulated)",
+			"command": fmt.Sprintf("pvcreate %s && vgcreate data_vg %s && lvcreate -L %s -n data_lv data_vg", device, device, size),
 		}).Print()
 	},
 }
@@ -51,27 +69,5 @@ func init() {
 	diskCmd.AddCommand(diskUsageCmd)
 	diskLvmCmd.AddCommand(lvmCreateCmd)
 	diskCmd.AddCommand(diskLvmCmd)
-	rootCmd.AddCommand(diskCmd)
-}
-
-var diskUsageCmd = &cobra.Command{
-	Use:   "usage [mountpoint]",
-	Short: "Show disk usage",
-	Args:  cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		path := "/"
-		if len(args) > 0 {
-			path = args[0]
-		}
-		output.NewSuccess(map[string]interface{}{
-			"path": path,
-			"status": "checked",
-		}).Print()
-	},
-}
-
-func init() {
-	diskCmd.AddCommand(diskListCmd)
-	diskCmd.AddCommand(diskUsageCmd)
 	rootCmd.AddCommand(diskCmd)
 }
