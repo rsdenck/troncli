@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // LinuxProcessManager implements ProcessManager for Linux

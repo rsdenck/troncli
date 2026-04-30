@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mascli/troncli/internal/core/adapter"
-	"github.com/mascli/troncli/internal/core/domain"
+	"github.com/rsdenck/nux/internal/core/adapter"
+	"github.com/rsdenck/nux/internal/core/domain"
 )
 
 // MockExecutor implements adapter.Executor for testing
@@ -28,7 +28,7 @@ func (m *MockExecutor) ExecWithInput(ctx context.Context, input string, command 
 
 func TestInstallPlugin_Success(t *testing.T) {
 	// 1. Create a temp directory for plugins
-	tmpDir, err := os.MkdirTemp("", "troncli-test-")
+	tmpDir, err := os.MkdirTemp("", "nux-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestInstallPlugin_Success(t *testing.T) {
 
 func TestInstallPlugin_ChecksumMismatch(t *testing.T) {
 	// 1. Temp dir
-	tmpDir, err := os.MkdirTemp("", "troncli-test-")
+	tmpDir, err := os.MkdirTemp("", "nux-test-")
 	if err != nil {
 		t.Fatal(err)
 	}

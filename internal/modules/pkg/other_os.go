@@ -4,7 +4,7 @@ package pkg
 
 import (
 	"errors"
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 type OtherOSPackageManager struct{}

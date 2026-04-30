@@ -5,7 +5,7 @@ package disk
 import (
 	"errors"
 
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 type OtherOSDiskManager struct{}

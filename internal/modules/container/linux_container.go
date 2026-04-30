@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // LinuxContainerManager implements ports.ContainerManager

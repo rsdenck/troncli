@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // ParseCrontabOutput parses the output of `crontab -l`

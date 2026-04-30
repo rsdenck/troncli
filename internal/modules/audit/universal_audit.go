@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mascli/troncli/internal/core/adapter"
-	"github.com/mascli/troncli/internal/core/domain"
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/adapter"
+	"github.com/rsdenck/nux/internal/core/domain"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // UniversalAuditManager implements ports.AuditManager

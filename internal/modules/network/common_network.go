@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // RunNativeDig performs a native DNS lookup
@@ -21,7 +21,7 @@ func RunNativeDig(target string) (string, error) {
 	}
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("; <<>> TRONCLI DiG 1.0 <<>> %s\n", target))
+	result.WriteString(fmt.Sprintf("; <<>> NUX DiG 1.0 <<>> %s\n", target))
 	result.WriteString(";; global options: +cmd\n")
 	result.WriteString(";; Got answer:\n")
 	result.WriteString(";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 12345\n")

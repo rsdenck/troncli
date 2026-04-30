@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mascli/troncli/internal/core/adapter"
-	"github.com/mascli/troncli/internal/core/domain"
+	"github.com/rsdenck/nux/internal/core/adapter"
+	"github.com/rsdenck/nux/internal/core/domain"
 )
 
 // UniversalBashManager implements BashManager for all Linux distributions

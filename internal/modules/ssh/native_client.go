@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/kevinburke/ssh_config"
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // NativeSSHClient implements ports.SSHClient by parsing ~/.ssh/config directly

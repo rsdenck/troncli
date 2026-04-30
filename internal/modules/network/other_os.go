@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 type OtherOSNetworkManager struct{}

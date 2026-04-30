@@ -1,4 +1,4 @@
-module github.com/mascli/troncli
+module github.com/rsdenck/nux
 
 go 1.24.0
 

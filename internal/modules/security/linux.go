@@ -1,7 +1,7 @@
 package security
 
 import (
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 type LinuxSecurityManager struct {

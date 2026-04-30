@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "installed_skills": [],
+  "enabled_skills": [],
+  "api_keys": {},
+  "ollama": {
+    "host": "http://localhost:11434",
+    "model": "qwen3-coder",
+    "enabled": false
+  },
+  "vault_mode": true
+}

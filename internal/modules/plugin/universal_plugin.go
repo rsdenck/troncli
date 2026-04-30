@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mascli/troncli/internal/core/adapter"
-	"github.com/mascli/troncli/internal/core/domain"
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/adapter"
+	"github.com/rsdenck/nux/internal/core/domain"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // PluginDef defines a plugin with security metadata
@@ -30,15 +30,15 @@ type PluginDef struct {
 // Default registry content
 var defaultPluginRegistry = map[string]PluginDef{
 	"arch": {
-		URL:      "https://raw.githubusercontent.com/rsdenck/troncli-plugins/main/arch/arch-helper.sh",
+		URL:      "https://raw.githubusercontent.com/rsdenck/nux-plugins/main/arch/arch-helper.sh",
 		Checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 	},
 	"docker": {
-		URL:      "https://raw.githubusercontent.com/rsdenck/troncli-plugins/main/docker/docker-helper.sh",
+		URL:      "https://raw.githubusercontent.com/rsdenck/nux-plugins/main/docker/docker-helper.sh",
 		Checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 	},
 	"k8s": {
-		URL:      "https://raw.githubusercontent.com/rsdenck/troncli-plugins/main/k8s/k8s-helper.sh",
+		URL:      "https://raw.githubusercontent.com/rsdenck/nux-plugins/main/k8s/k8s-helper.sh",
 		Checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 	},
 }
@@ -57,7 +57,7 @@ func NewUniversalPluginManager(executor adapter.Executor, profile *domain.System
 	if err != nil {
 		return nil, err
 	}
-	configDir := filepath.Join(home, ".troncli")
+	configDir := filepath.Join(home, ".nux")
 	pluginDir := filepath.Join(configDir, "plugins")
 	if err := os.MkdirAll(pluginDir, 0755); err != nil {
 		return nil, err
@@ -236,7 +236,7 @@ func (m *UniversalPluginManager) ExecutePlugin(ctx context.Context, name string,
 		fmt.Sprintf("HOME=%s", os.Getenv("HOME")),
 		fmt.Sprintf("TERM=%s", os.Getenv("TERM")),
 		fmt.Sprintf("LANG=%s", os.Getenv("LANG")),
-		fmt.Sprintf("TRONCLI_PLUGIN_NAME=%s", name),
+		fmt.Sprintf("NUX_PLUGIN_NAME=%s", name),
 	}
 
 	// Limit Output (10MB max)

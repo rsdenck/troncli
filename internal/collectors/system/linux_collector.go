@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mascli/troncli/internal/core/ports"
+	"github.com/rsdenck/nux/internal/core/ports"
 )
 
 // LinuxSystemMonitor implements SystemMonitor for Linux using /proc
