@@ -6,17 +6,18 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/rsdenck/nux/internal/vault"
 	"github.com/spf13/cobra"
 )
 
-var askCmd = &cobra.Command{
-	Use:   "ask",
-	Short: "Ask questions to AI providers (Ollama, OpenAI, Claude)",
-	Long:  `Query AI models for code assistance, system analysis, and automation.`,
-}
+	var askCmd = &cobra.Command{
+		Use:   "ask",
+		Short: "Ask questions to AI providers (Ollama, OpenAI, Claude, NVIDIA Build)",
+		Long:  `Query AI models for code assistance, system analysis, and automation.`,
+	}
 
 var askQueryCmd = &cobra.Command{
 	Use:   "query <question>",
@@ -40,6 +41,8 @@ var askQueryCmd = &cobra.Command{
 			askOllamaFunc(question, model, provider)
 		case "openai":
 			askOpenAI(question, model, provider)
+		case "nvidia":
+			askNvidiaBuild(question, model, provider)
 		case "claude":
 			askClaude(question, model, provider)
 		default:
@@ -158,7 +161,166 @@ func askOpenAI(question, model, provider string) {
 }
 
 func askClaude(question, model, provider string) {
-	output.NewInfo("Claude provider not yet implemented").Print()
+	v, err := vault.Load()
+	if err != nil {
+		output.NewError("failed to load vault", "VAULT_ERROR").Print()
+		return
+	}
+
+	apiKey, ok := v.GetAPIKey("claude")
+	if !ok {
+		output.NewError("Claude API key not found. Use: nux ask config --provider claude --api-key <key>", "ASK_NO_API_KEY").Print()
+		return
+	}
+
+	url := "https://api.anthropic.com/v1/messages"
+
+	if model == "" {
+		model = "claude-3-5-sonnet-20241022"
+	}
+
+	payload := map[string]interface{}{
+		"model":      model,
+		"max_tokens": 8192,
+		"messages": []map[string]string{
+			{"role": "user", "content": question},
+		},
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to marshal payload: %s", err.Error()), "ASK_MARSHAL_ERROR").Print()
+		return
+	}
+
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(data)))
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to create request: %s", err.Error()), "ASK_REQUEST_ERROR").Print()
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", apiKey)
+	req.Header.Set("anthropic-version", "2023-06-01")
+
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to connect to Claude: %s", err.Error()), "ASK_CLAUDE_ERROR").Print()
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to read response: %s", err.Error()), "ASK_READ_ERROR").Print()
+		return
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		output.NewError("failed to parse Claude response", "ASK_PARSE_ERROR").Print()
+		return
+	}
+
+	if content, ok := result["content"].([]interface{}); ok && len(content) > 0 {
+		if block, ok := content[0].(map[string]interface{}); ok {
+			if text, ok := block["text"].(string); ok {
+				output.NewSuccess(map[string]interface{}{
+					"provider": "claude",
+					"model":    model,
+					"response": text,
+				}).WithMessage("Claude Response").Print()
+				return
+			}
+		}
+	}
+
+	output.NewError("no response from Claude", "ASK_NO_RESPONSE").Print()
+}
+
+func askNvidiaBuild(question, model, provider string) {
+	v, err := vault.Load()
+	if err != nil {
+		output.NewError("failed to load vault", "VAULT_ERROR").Print()
+		return
+	}
+
+	apiKey, ok := v.GetAPIKey("nvidia")
+	if !ok {
+		output.NewError("NVIDIA API key not found. Use: nux ask config --provider nvidia --api-key <key>", "ASK_NO_API_KEY").Print()
+		return
+	}
+
+	url := "https://integrate.api.nvidia.com/v1/chat/completions"
+
+	if model == "" {
+		model = "minimaxai/minimax-m2.7"
+	}
+
+	payload := map[string]interface{}{
+		"model": model,
+		"messages": []map[string]string{
+			{"role": "user", "content": question},
+		},
+		"temperature": 1,
+		"top_p": 0.95,
+		"max_tokens": 8192,
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to marshal payload: %s", err.Error()), "ASK_MARSHAL_ERROR").Print()
+		return
+	}
+
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(data)))
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to create request: %s", err.Error()), "ASK_REQUEST_ERROR").Print()
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to connect to NVIDIA Build: %s", err.Error()), "ASK_NVIDIA_ERROR").Print()
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		output.NewError(fmt.Sprintf("failed to read response: %s", err.Error()), "ASK_READ_ERROR").Print()
+		return
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		output.NewError("failed to parse NVIDIA Build response", "ASK_PARSE_ERROR").Print()
+		return
+	}
+
+	if choices, ok := result["choices"].([]interface{}); ok && len(choices) > 0 {
+		if choice, ok := choices[0].(map[string]interface{}); ok {
+			if message, ok := choice["message"].(map[string]interface{}); ok {
+				if content, ok := message["content"].(string); ok {
+					output.NewSuccess(map[string]interface{}{
+						"provider": "nvidia-build",
+						"model":    model,
+						"response": content,
+					}).WithMessage("NVIDIA Build Response").Print()
+					return
+				}
+			}
+		}
+	}
+
+	output.NewError("no response from NVIDIA Build", "ASK_NO_RESPONSE").Print()
 }
 
 var askConfigCmd = &cobra.Command{

@@ -1,5 +1,5 @@
 # Discord
-- **Repo:** https://github.com/discord/discord-api-docs
+- **Repo:** https://github.com/rsdenck/skillnux/infrastructure/discord.md_pull.go
 - **Description:** Discord chat and VoIP platform CLI integration
 - **Install:** `nux skill install discord` (requires manual download from Discord developer portal)
 - **Commands:** discord, discord-bot
