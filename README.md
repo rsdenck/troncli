@@ -6,8 +6,6 @@
 ![Go Version](https://img.shields.io/badge/go-1.21+-orange?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Linux-black?style=for-the-badge)
 
----
-
 <p align="center">
   <img src="https://img.shields.io/badge/NUX-Big_Boss_for_Linux-orange?style=for-the-badge&labelColor=black">
 </p>
