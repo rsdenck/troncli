@@ -1,6 +1,6 @@
 # CircleCI CLI
 
-- **Repo:** CircleCI-Public/circleci-cli
+- **Repo:** https://github.com/rsdenck/skillnux/ci-cd/circleci_pull.go
 - **Description:** CLI for CircleCI
 - **Category:** CI/CD
 

@@ -1,6 +1,6 @@
 # GitHub CLI
 
-- **Repo:** cli/cli
+- **Repo:** https://github.com/rsdenck/skillnux/git/gh-cli_pull.go
 - **Description:** GitHub on the command line
 - **Category:** Git
 

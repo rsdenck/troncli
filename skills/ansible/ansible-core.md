@@ -1,6 +1,6 @@
 # Ansible Core CLI
 
-- **Repo:** ansible/ansible
+- **Repo:** https://github.com/rsdenck/skillnux/automation/ansible_pull.go
 - **Description:** Automation and configuration management tool
 - **Category:** Automation
 
