@@ -1,5 +1,7 @@
 # NUX CLI
 
+![NUX CLI](img/nux_cli.png)
+
 ![NUX Logo](https://img.shields.io/badge/NUX-Professional-orange?style=for-the-badge)
 ![Version](https://img.shields.io/badge/version-0.3.0--beta-orange?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-black?style=for-the-badge)
