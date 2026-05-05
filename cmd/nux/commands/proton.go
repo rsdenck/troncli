@@ -136,8 +136,12 @@ var protonVpnListCmd = &cobra.Command{
 			return
 		}
 
-		// Fallback to API
-		resp, err := http.Get("https://api.protonvpn.ch/vpn/logicals")
+		// Fallback to API with required headers
+		req, _ := http.NewRequest("GET", "https://api.protonvpn.ch/vpn/logicals", nil)
+		req.Header.Set("x-pm-appversion", "Other")
+		req.Header.Set("x-pm-client-version", "nux-cli-1.0")
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			output.NewError(fmt.Sprintf("Failed to fetch servers: %s", err.Error()), "PROTON_LIST_ERROR").Print()
 			return
