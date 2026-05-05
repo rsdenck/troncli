@@ -12,13 +12,6 @@
   <img src="https://img.shields.io/badge/NUX-Big_Boss_for_Linux-orange?style=for-the-badge&labelColor=black">
 </p>
 
-<h1 align="center">NUX CLI - Big Boss for Linux & SysAdmins</h1>
-
-<p align="center">
-  <b>Professional CLI for Linux system administration with native AI integration</b><br/>
-  <i>Ollama, NVIDIA Build, OpenAI, Claude - All in one place</i>
-</p>
-
 ---
 
 ## About the Project

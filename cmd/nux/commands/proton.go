@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os/exec"
 	"strings"
 
@@ -95,6 +98,90 @@ var protonVpnDisconnectCmd = &cobra.Command{
 	},
 }
 
+// Login command
+var protonVpnLoginCmd = &cobra.Command{
+	Use:   "login",
+	Short: "Login to Proton account",
+	Run: func(cmd *cobra.Command, args []string) {
+		username, _ := cmd.Flags().GetString("username")
+		password, _ := cmd.Flags().GetString("password")
+		if username == "" || password == "" {
+			output.NewError("Username and password required (use --username and --password flags)", "PROTON_LOGIN_MISSING").Print()
+			return
+		}
+		// Simple simulation: store in memory (or could save to config)
+		// For real implementation, use SRP authentication via go-srp
+		output.NewSuccess(map[string]interface{}{
+			"action":   "login",
+			"username": username,
+			"status":   "logged in (simulated)",
+			"note":     "Use 'nux proton vpn list' to see available servers",
+		}).Print()
+	},
+}
+
+// List servers command
+var protonVpnListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List Proton VPN servers with availability",
+	Run: func(cmd *cobra.Command, args []string) {
+		resp, err := http.Get("https://api.protonvpn.ch/vpn/logicals")
+		if err != nil {
+			output.NewError(fmt.Sprintf("Failed to fetch servers: %s", err.Error()), "PROTON_LIST_ERROR").Print()
+			return
+		}
+		defer resp.Body.Close()
+
+		body, _ := io.ReadAll(resp.Body)
+		var data map[string]interface{}
+		if err := json.Unmarshal(body, &data); err != nil {
+			output.NewError("Failed to parse server list", "PROTON_PARSE_ERROR").Print()
+			return
+		}
+
+		servers, ok := data["LogicalServers"].([]interface{})
+		if !ok {
+			output.NewInfo("No servers found").Print()
+			return
+		}
+
+		fmt.Println("Proton VPN Servers")
+		fmt.Println("┌───────────────────────────────────────┬──────────────────┬─────────┐")
+		fmt.Println("│ SERVER                            │ COUNTRY          │ STATUS  │")
+		fmt.Println("├───────────────────────────────────────┼──────────────────┼─────────┤")
+
+		for _, s := range servers {
+			if serverMap, ok := s.(map[string]interface{}); ok {
+				name := ""
+				if n, ok := serverMap["Name"].(string); ok {
+					name = n
+				}
+				country := ""
+				if c, ok := serverMap["Country"].(string); ok {
+					country = c
+				}
+				status := "Available"
+				// If server has a "Status" field, use it
+				if st, ok := serverMap["Status"].(float64); ok {
+					if st == 0 {
+						status = "Unavailable"
+					}
+				}
+				// Color: green for available, red for unavailable (using ANSI codes)
+				statusColored := status
+				if status == "Available" {
+					statusColored = "\033[32m" + status + "\033[0m"
+				} else {
+					statusColored = "\033[31m" + status + "\033[0m"
+				}
+				fmt.Printf("│ %-33s │ %-16s │ %-7s │\n", name, country, statusColored)
+			}
+		}
+		fmt.Println("└───────────────────────────────────────┴──────────────────┴─────────┘")
+		fmt.Printf("\n%d servers found\n", len(servers))
+	},
+}
+
 // Open parent command
 var protonOpenCmd = &cobra.Command{
 	Use:   "open",
@@ -177,6 +264,10 @@ func init() {
 	protonVpnCmd.AddCommand(protonVpnConnectCmd)
 	protonVpnCmd.AddCommand(protonVpnFastestCmd)
 	protonVpnCmd.AddCommand(protonVpnDisconnectCmd)
+	protonVpnCmd.AddCommand(protonVpnLoginCmd)
+	protonVpnCmd.AddCommand(protonVpnListCmd)
+	protonVpnLoginCmd.Flags().String("username", "", "Proton username")
+	protonVpnLoginCmd.Flags().String("password", "", "Proton password")
 
 	// Add Open subcommands
 	protonOpenCmd.AddCommand(protonOpenMailCmd)
