@@ -54,12 +54,36 @@ var installCmd = &cobra.Command{
 				return
 			}
 			pkgExecutor.CombinedOutput("sudo", append([]string{"apt", "install", "-y"}, args...)...)
+		case "dnf":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "install", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"dnf", "install", "-y"}, args...)...)
+		case "yum":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "install", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"yum", "install", "-y"}, args...)...)
 		case "pacman":
 			if dryRun {
 				output.NewInfo(map[string]interface{}{"action": "install", "packages": args, "dry_run": true}).Print()
 				return
 			}
 			pkgExecutor.CombinedOutput("sudo", append([]string{"pacman", "-S", "--noconfirm"}, args...)...)
+		case "zypper":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "install", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"zypper", "install", "-y"}, args...)...)
+		case "apk":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "install", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"apk", "add"}, args...)...)
 		default:
 			output.NewError(fmt.Sprintf("Gerenciador não suportado: %s", pm), "PKG_UNSUPPORTED").Print()
 		}
@@ -89,12 +113,36 @@ var removeCmd = &cobra.Command{
 				return
 			}
 			pkgExecutor.CombinedOutput("sudo", append([]string{"apt", "remove", "-y"}, args...)...)
+		case "dnf":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "remove", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"dnf", "remove", "-y"}, args...)...)
+		case "yum":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "remove", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"yum", "remove", "-y"}, args...)...)
 		case "pacman":
 			if dryRun {
 				output.NewInfo(map[string]interface{}{"action": "remove", "packages": args, "dry_run": true}).Print()
 				return
 			}
 			pkgExecutor.CombinedOutput("sudo", append([]string{"pacman", "-R", "--noconfirm"}, args...)...)
+		case "zypper":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "remove", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"zypper", "remove", "-y"}, args...)...)
+		case "apk":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "remove", "packages": args, "dry_run": true}).Print()
+				return
+			}
+			pkgExecutor.CombinedOutput("sudo", append([]string{"apk", "del"}, args...)...)
 		}
 
 		output.NewSuccess(map[string]interface{}{"packages": args, "status": "removed", "manager": pm}).Print()
@@ -120,12 +168,36 @@ var updateCmd = &cobra.Command{
 				return
 			}
 			exec.Command("sudo", "apt", "update").Run()
+		case "dnf":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "update", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "dnf", "check-update").Run()
+		case "yum":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "update", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "yum", "check-update").Run()
 		case "pacman":
 			if dryRun {
 				output.NewInfo(map[string]interface{}{"action": "update", "manager": pm, "dry_run": true}).Print()
 				return
 			}
 			exec.Command("sudo", "pacman", "-Sy").Run()
+		case "zypper":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "update", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "zypper", "refresh").Run()
+		case "apk":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "update", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "apk", "update").Run()
 		}
 
 		output.NewSuccess(map[string]interface{}{"action": "update", "manager": pm, "status": "updated"}).Print()
@@ -151,12 +223,36 @@ var upgradeCmd = &cobra.Command{
 				return
 			}
 			exec.Command("sudo", "apt", "upgrade", "-y").Run()
+		case "dnf":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "upgrade", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "dnf", "upgrade", "-y").Run()
+		case "yum":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "upgrade", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "yum", "upgrade", "-y").Run()
 		case "pacman":
 			if dryRun {
 				output.NewInfo(map[string]interface{}{"action": "upgrade", "manager": pm, "dry_run": true}).Print()
 				return
 			}
 			exec.Command("sudo", "pacman", "-Syu").Run()
+		case "zypper":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "upgrade", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "zypper", "update", "-y").Run()
+		case "apk":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "upgrade", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "apk", "upgrade").Run()
 		}
 
 		output.NewSuccess(map[string]interface{}{"action": "upgrade", "manager": pm, "status": "upgraded"}).Print()
@@ -182,12 +278,36 @@ var cleanCmd = &cobra.Command{
 				return
 			}
 			exec.Command("sudo", "apt", "clean").Run()
+		case "dnf":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "clean", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "dnf", "clean", "all").Run()
+		case "yum":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "clean", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "yum", "clean", "all").Run()
 		case "pacman":
 			if dryRun {
 				output.NewInfo(map[string]interface{}{"action": "clean", "manager": pm, "dry_run": true}).Print()
 				return
 			}
 			exec.Command("sudo", "pacman", "-Sc").Run()
+		case "zypper":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "clean", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "zypper", "clean").Run()
+		case "apk":
+			if dryRun {
+				output.NewInfo(map[string]interface{}{"action": "clean", "manager": pm, "dry_run": true}).Print()
+				return
+			}
+			exec.Command("sudo", "apk", "cache", "clean").Run()
 		}
 
 		output.NewSuccess(map[string]interface{}{"action": "clean", "manager": pm, "status": "cleaned"}).Print()

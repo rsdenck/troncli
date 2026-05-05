@@ -152,7 +152,23 @@ func printItemsAsFormattedTable(items interface{}, total int, message string) {
 func printDataAsFormattedTable(data interface{}) {
 	if m, ok := data.(map[string]interface{}); ok {
 		headers := []string{"KEY", "VALUE"}
-		widths := []int{20, 40}
+		// Calculate widths based on content
+		keyWidth := len(headers[0])
+		valWidth := len(headers[1])
+		for k, v := range m {
+			keyLen := len(k)
+			valLen := len(fmt.Sprintf("%v", v))
+			if keyLen > keyWidth {
+				keyWidth = keyLen
+			}
+			if valLen > valWidth {
+				valWidth = valLen
+			}
+		}
+		// Add padding
+		keyWidth += 2
+		valWidth += 2
+		widths := []int{keyWidth, valWidth}
 
 		printTopBorder(widths)
 		printRow(headers, widths)
@@ -234,8 +250,10 @@ func PrintTable(headers []string, rows [][]string) {
 
 	for _, row := range rows {
 		for i, cell := range row {
-			if len(cell)+2 > widths[i] {
-				widths[i] = len(cell) + 2
+			// Strip ANSI color codes for width calculation
+			cleanCell := stripAnsi(cell)
+			if len(cleanCell)+2 > widths[i] {
+				widths[i] = len(cleanCell) + 2
 			}
 		}
 	}
@@ -247,6 +265,80 @@ func PrintTable(headers []string, rows [][]string) {
 		printRow(row, widths)
 	}
 	printBottomBorder(widths)
+}
+
+// PrintCompactTable prints a compact table that fits content
+func PrintCompactTable(headers []string, rows [][]string) {
+	if len(rows) == 0 {
+		return
+	}
+
+	// Calculate minimal widths based on content
+	widths := make([]int, len(headers))
+	for i, h := range headers {
+		widths[i] = len(h) + 2
+	}
+
+	for _, row := range rows {
+		for i, cell := range row {
+			cleanCell := stripAnsi(cell)
+			if len(cleanCell)+2 > widths[i] {
+				widths[i] = len(cleanCell) + 2
+			}
+		}
+	}
+
+	// Cap column width to terminal width (approx 80)
+	maxWidth := 80
+	totalWidth := 2 // borders
+	for _, w := range widths {
+		totalWidth += w + 1 // cell + separator
+	}
+	if totalWidth > maxWidth {
+		// Reduce value column if needed
+		excess := totalWidth - maxWidth
+		widths[1] -= excess
+		if widths[1] < 10 {
+			widths[1] = 10
+		}
+	}
+
+	printTopBorder(widths)
+	printRow(headers, widths)
+	printSeparator(widths)
+	for _, row := range rows {
+		// Truncate value if too long (preserving color codes)
+		if len(row) > 1 {
+			cleanVal := stripAnsi(row[1])
+			if len(cleanVal) > widths[1]-2 {
+				row[1] = row[1][:widths[1]-5] + "..."
+			}
+		}
+		printRow(row, widths)
+	}
+	printBottomBorder(widths)
+}
+
+// stripAnsi removes ANSI color codes from string
+func stripAnsi(s string) string {
+	result := ""
+	inEscape := false
+	for _, c := range s {
+		if c == '\033' {
+			inEscape = true
+			continue
+		}
+		if inEscape && (c == 'm' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z') {
+			if c == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		if !inEscape {
+			result += string(c)
+		}
+	}
+	return result
 }
 
 // Helper functions for commands

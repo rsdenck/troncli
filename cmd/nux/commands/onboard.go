@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/rsdenck/nux/internal/output"
 	"github.com/rsdenck/nux/internal/vault"
@@ -18,17 +19,17 @@ var onboardCmd = &cobra.Command{
 }
 
 func displayPremiumBanner() {
-	banner := []string{
-		"",
-		"  ┌─────────────────────────────────────────────────────────────┐",
-		"  │  NUX - Next-gen Unified eXecutor                         │",
-		"  │  Linux CLI Moderno para Sysadmins                       │",
-		"  └─────────────────────────────────────────────────────────────┘",
-		"",
-	}
-	for _, line := range banner {
-		fmt.Println(line)
-	}
+	width := 60
+	top := fmt.Sprintf("┌%s┐", strings.Repeat("─", width))
+	bottom := fmt.Sprintf("└%s┘", strings.Repeat("─", width))
+	line1 := fmt.Sprintf("│  NUX - Next-gen Unified eXecutor%s│", strings.Repeat(" ", width-len("  NUX - Next-gen Unified eXecutor")))
+	line2 := fmt.Sprintf("│  Linux CLI Moderno para Sysadmins%s│", strings.Repeat(" ", width-len("  Linux CLI Moderno para Sysadmins")))
+	fmt.Println()
+	fmt.Println(top)
+	fmt.Println(line1)
+	fmt.Println(line2)
+	fmt.Println(bottom)
+	fmt.Println()
 }
 
 func runOnboardFlow() {

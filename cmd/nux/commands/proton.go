@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/rsdenck/nux/internal/output"
+	"github.com/rsdenck/nux/internal/vault"
 	"github.com/spf13/cobra"
 )
 
@@ -96,6 +97,19 @@ var protonVpnLoginCmd = &cobra.Command{
 
 		if err != nil {
 			output.NewError(fmt.Sprintf("Login failed: %s", strings.TrimSpace(string(out))), "PROTON_LOGIN_ERROR").Print()
+			return
+		}
+
+		// Save credentials to vault
+		v, err := vault.Load()
+		if err != nil {
+			v = vault.NewVault()
+		}
+		v.APIKeys["proton_username"] = username
+		// Note: Password not stored for security, but user can re-login if needed
+		v.Config["proton_logged_in"] = true
+		if err := vault.Save(v); err != nil {
+			output.NewError(fmt.Sprintf("Failed to save credentials to vault: %s", err.Error()), "VAULT_SAVE_ERROR").Print()
 			return
 		}
 

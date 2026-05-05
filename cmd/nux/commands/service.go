@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -16,6 +15,43 @@ var serviceCmd = &cobra.Command{
 	Use:   "service",
 	Short: "Service management",
 	Long:  `Manage system services (systemd, openrc, sysvinit, runit).`,
+}
+
+// Top-level convenience commands (short aliases)
+var statusCmd = &cobra.Command{
+	Use:   "status <service>",
+	Short: "Show service status (alias for 'service status')",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		serviceStatusCmd.Run(cmd, args)
+	},
+}
+
+var startCmd = &cobra.Command{
+	Use:   "start <service>",
+	Short: "Start a service (alias for 'service start')",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		serviceStartCmd.Run(cmd, args)
+	},
+}
+
+var stopCmd = &cobra.Command{
+	Use:   "stop <service>",
+	Short: "Stop a service (alias for 'service stop')",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		serviceStopCmd.Run(cmd, args)
+	},
+}
+
+var restartCmd = &cobra.Command{
+	Use:   "restart <service>",
+	Short: "Restart a service (alias for 'service restart')",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		serviceRestartCmd.Run(cmd, args)
+	},
 }
 
 type ServiceInfo struct {
@@ -108,20 +144,145 @@ var serviceStatusCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		service := core.SanitizeInput(args[0])
-		
-		out, _ := serviceExecutor.CombinedOutput("systemctl", "status", service)
-		jsonOut, _ := serviceExecutor.CombinedOutput("systemctl", "show", service, "--output=json")
 
-		var jsonData interface{}
-		if jsonErr := json.Unmarshal([]byte(jsonOut), &jsonData); jsonErr == nil {
-			output.NewSuccess(jsonData).Print()
-			return
+		// Get status output
+		out, _ := serviceExecutor.CombinedOutput("systemctl", "status", service)
+		lines := strings.Split(strings.TrimSpace(out), "\n")
+
+		// Color codes
+		green := "\033[92m"
+		red := "\033[91m"
+		orange := "\033[93m"
+		reset := "\033[0m"
+
+		// Parse key service info
+		keyInfo := map[string]string{}
+		logs := []string{}
+		inLogs := false
+		isActive := false
+		hasProblem := false
+
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+
+			// Parse key metadata
+			if strings.HasPrefix(trimmed, "Active:") {
+				active := strings.TrimPrefix(trimmed, "Active: ")
+				keyInfo["Active"] = active
+				if strings.Contains(active, "active (running)") {
+					isActive = true
+				} else if strings.Contains(active, "failed") || strings.Contains(active, "error") {
+					hasProblem = true
+				}
+			} else if strings.HasPrefix(trimmed, "Loaded:") {
+				keyInfo["Loaded"] = strings.TrimPrefix(trimmed, "Loaded: ")
+			} else if strings.HasPrefix(trimmed, "Main PID:") {
+				keyInfo["Main PID"] = strings.TrimPrefix(trimmed, "Main PID: ")
+			} else if strings.HasPrefix(trimmed, "Status:") {
+				keyInfo["Status"] = strings.TrimPrefix(trimmed, "Status: ")
+			} else if strings.HasPrefix(trimmed, "Tasks:") {
+				keyInfo["Tasks"] = strings.TrimPrefix(trimmed, "Tasks: ")
+			} else if strings.HasPrefix(trimmed, "Memory:") {
+				keyInfo["Memory"] = strings.TrimPrefix(trimmed, "Memory: ")
+			} else if strings.HasPrefix(trimmed, "CPU:") {
+				keyInfo["CPU"] = strings.TrimPrefix(trimmed, "CPU: ")
+			} else if strings.Contains(trimmed, "systemd[1]:") || strings.Contains(trimmed, "Started ") {
+				inLogs = true
+			}
+
+			// Collect log lines
+			if inLogs && (strings.Contains(trimmed, "systemd[1]:") || strings.Contains(trimmed, "httpd[") || strings.Contains(trimmed, "Started ")) {
+				logs = append(logs, trimmed)
+			}
 		}
 
-		output.NewSuccess(map[string]interface{}{
-			"service": service,
-			"output":  strings.TrimSpace(out),
-		}).Print()
+		// Determine status color
+		statusColor := green
+		statusText := "RUNNING"
+		if hasProblem {
+			statusColor = red
+			statusText = "PROBLEM"
+		} else if !isActive {
+			statusColor = orange
+			statusText = "STOPPED"
+		}
+
+	// Calculate table width based on content
+	// Header widths
+	keyWidth := len("KEY") + 2
+	valueWidth := len("VALUE") + 2
+	
+	// Adjust based on key info content
+	order := []string{"Active", "Loaded", "Main PID", "Status", "Tasks", "Memory", "CPU"}
+	for _, k := range order {
+		if v, ok := keyInfo[k]; ok {
+			// Key width
+			if len(k)+2 > keyWidth {
+				keyWidth = len(k) + 2
+			}
+			// Value width (ANSI codes are short, so just use raw length)
+			if len(v)+2 > valueWidth {
+				valueWidth = len(v) + 2
+			}
+		}
+	}
+	
+	// Cap value width to keep total ~80 chars
+	totalWidth := keyWidth + 1 + valueWidth + 2 // ┌ + key + ┬ + value + ┐
+	if totalWidth > 80 {
+		valueWidth = valueWidth - (totalWidth - 80)
+		if valueWidth < 10 {
+			valueWidth = 10
+		}
+	}
+	
+	tableWidth := keyWidth + 1 + valueWidth + 2 // Total table width
+
+	// Print concise colored output
+	fmt.Printf("\n● Service: %s [%s%s%s]\n", service, statusColor, statusText, reset)
+	// Always use tableWidth for separator to match table borders
+	fmt.Println(strings.Repeat("─", tableWidth))
+
+		// Print key info as compact table
+		if len(keyInfo) > 0 {
+			headers := []string{"KEY", "VALUE"}
+			rows := [][]string{}
+			order := []string{"Active", "Loaded", "Main PID", "Status", "Tasks", "Memory", "CPU"}
+			for _, k := range order {
+				if v, ok := keyInfo[k]; ok {
+					// Color the Active field
+					if k == "Active" {
+						if isActive {
+							v = green + v + reset
+						} else if hasProblem {
+							v = red + v + reset
+						} else {
+							v = orange + v + reset
+						}
+					}
+					rows = append(rows, []string{k, v})
+				}
+			}
+			output.PrintCompactTable(headers, rows)
+			fmt.Println()
+		}
+
+		// Print last 3 log lines
+		if len(logs) > 0 {
+			fmt.Println("Recent Logs (last 3):")
+			fmt.Println(strings.Repeat("─", tableWidth))
+			start := len(logs) - 3
+			if start < 0 {
+				start = 0
+			}
+			for _, log := range logs[start:] {
+				fmt.Println(log)
+			}
+			fmt.Println()
+		}
 	},
 }
 
@@ -132,6 +293,8 @@ var serviceStartCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		service := core.SanitizeInput(args[0])
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		green := "\033[92m"
+		reset := "\033[0m"
 
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
@@ -150,11 +313,7 @@ var serviceStartCmd = &cobra.Command{
 			return
 		}
 
-		output.NewSuccess(map[string]interface{}{
-			"service": service,
-			"action":  "start",
-			"status":  "started",
-		}).Print()
+		fmt.Printf("%s✔ Service %s started successfully%s\n", green, service, reset)
 	},
 }
 
@@ -165,6 +324,8 @@ var serviceStopCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		service := core.SanitizeInput(args[0])
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		orange := "\033[93m"
+		reset := "\033[0m"
 
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
@@ -183,11 +344,7 @@ var serviceStopCmd = &cobra.Command{
 			return
 		}
 
-		output.NewSuccess(map[string]interface{}{
-			"service": service,
-			"action":  "stop",
-			"status":  "stopped",
-		}).Print()
+		fmt.Printf("%s■ Service %s stopped%s\n", orange, service, reset)
 	},
 }
 
@@ -257,19 +414,58 @@ var serviceDisableCmd = &cobra.Command{
 	},
 }
 
+var serviceRestartCmd = &cobra.Command{
+	Use:   "restart <service>",
+	Short: "Restart a service",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		service := core.SanitizeInput(args[0])
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		green := "\033[92m"
+		reset := "\033[0m"
+
+		if dryRun {
+			output.NewInfo(map[string]interface{}{
+				"service": service,
+				"action":  "restart",
+				"dry_run": true,
+				"command": fmt.Sprintf("systemctl restart %s", service),
+			}).Print()
+			return
+		}
+
+		_, err := serviceExecutor.CombinedOutput("systemctl", "restart", service)
+		
+		if err != nil {
+			output.NewError(fmt.Sprintf("failed to restart service: %s", err.Error()), "SERVICE_RESTART_ERROR").Print()
+			return
+		}
+
+		fmt.Printf("%s↻ Service %s restarted successfully%s\n", green, service, reset)
+	},
+}
+
 func init() {
 	serviceListCmd.Flags().Bool("json", false, "Output in JSON format")
 	serviceCmd.AddCommand(serviceListCmd)
 	serviceCmd.AddCommand(serviceStatusCmd)
 	serviceCmd.AddCommand(serviceStartCmd)
 	serviceCmd.AddCommand(serviceStopCmd)
+	serviceCmd.AddCommand(serviceRestartCmd)
 	serviceCmd.AddCommand(serviceEnableCmd)
 	serviceCmd.AddCommand(serviceDisableCmd)
 	
 	serviceStartCmd.Flags().Bool("dry-run", false, "Simulate command")
 	serviceStopCmd.Flags().Bool("dry-run", false, "Simulate command")
+	serviceRestartCmd.Flags().Bool("dry-run", false, "Simulate command")
 	serviceEnableCmd.Flags().Bool("dry-run", false, "Simulate command")
 	serviceDisableCmd.Flags().Bool("dry-run", false, "Simulate command")
 	
 	rootCmd.AddCommand(serviceCmd)
+	
+	// Register top-level convenience commands
+	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(stopCmd)
+	rootCmd.AddCommand(restartCmd)
 }
