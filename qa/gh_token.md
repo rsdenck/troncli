@@ -1,19 +1,26 @@
 # GitHub Token (gh CLI)
 
-O token de acesso ao GitHub está sendo gerenciado pelo helper de credenciais do Git.
+Token de acesso ao GitHub (usado pelo gh CLI e git credentials).
+
+## Token#
+
+```
+ghp_N369EtWTrL3saR15tLrx7UYf2Fjp4F3VKz
+```
 
 ## Informações#
 
-- O comando `gh` não está instalado no sistema
-- Os pushes para o repositório funcionam via credential helper
-- O token está armazenado no git credential helper
+- Tipo: Fine-grained personal access token
+- Permissões: Repo (read/write)
+- Expiração: Configurada no GitHub
 
-## Como obter o token manualmente#
+## Uso#
 
 ```bash
-# Se o gh estivesse instalado:
-gh auth token
+# Configurar git com token:
+git config --global credential.helper store
+echo "https://ghp_N369EtWTrL3saR15tLrx7UYf2Fjp4F3VKz@github.com" > ~/.git-credentials
 
-# Verificar credential helper:
-git config --global credential.helper
+# Verificar token:
+gh auth token  # Requer gh CLI instalado
 ```
