@@ -206,20 +206,10 @@ func printBottomBorder(widths []int) {
 func printRow(values []string, widths []int) {
 	fmt.Print("│")
 	for i, v := range values {
-		fmt.Printf(" %-*s ", widths[i]-2, truncate(v, widths[i]-2))
+		fmt.Printf(" %-*s ", widths[i]-2, v)
 		fmt.Print("│")
 	}
 	fmt.Println()
-}
-
-func truncate(s string, max int) string {
-	if len(s) > max {
-		if max > 3 {
-			return s[:max-3] + "..."
-		}
-		return s[:max]
-	}
-	return s
 }
 
 func getKeys(m map[string]interface{}) []string {

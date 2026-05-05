@@ -36,19 +36,73 @@ var networkListCmd = &cobra.Command{
 			return
 		}
 
-		items := []map[string]interface{}{}
+		// Calculate dynamic widths
+		nameWidth := 4 // "NAME"
+		typeWidth := 4 // "TYPE"
+		stateWidth := 5 // "STATE"
+		addrWidth := 7  // "ADDRESS"
+		speedWidth := 5 // "SPEED"
+
 		for _, iface := range interfaces {
-			items = append(items, map[string]interface{}{
-				"name":    iface.Name,
-				"type":    iface.Type,
-				"state":   iface.State,
-				"address": iface.Address,
-				"speed":   iface.Speed,
-			})
+			if len(iface.Name) > nameWidth {
+				nameWidth = len(iface.Name)
+			}
+			if len(iface.Type) > typeWidth {
+				typeWidth = len(iface.Type)
+			}
+			if len(iface.State) > stateWidth {
+				stateWidth = len(iface.State)
+			}
+			if len(iface.Address) > addrWidth {
+				addrWidth = len(iface.Address)
+			}
+			if len(iface.Speed) > speedWidth {
+				speedWidth = len(iface.Speed)
+			}
 		}
 
-		output.NewList(items, len(items)).WithMessage("Network interfaces").Print()
+		// Add padding
+		nameWidth += 2
+		typeWidth += 2
+		stateWidth += 2
+		addrWidth += 2
+		speedWidth += 2
+
+		// Print header
+		fmt.Println("Network interfaces")
+		printBorder(nameWidth, typeWidth, stateWidth, addrWidth, speedWidth, "┌", "┬", "┐")
+		fmt.Printf("│ %-*s │ %-*s │ %-*s │ %-*s │ %-*s │\n",
+			nameWidth-2, "NAME", typeWidth-2, "TYPE", stateWidth-2, "STATE", addrWidth-2, "ADDRESS", speedWidth-2, "SPEED")
+		printBorder(nameWidth, typeWidth, stateWidth, addrWidth, speedWidth, "├", "┼", "┤")
+
+		for _, iface := range interfaces {
+			fmt.Printf("│ %-*s │ %-*s │ %-*s │ %-*s │ %-*s │\n",
+				nameWidth-2, iface.Name, typeWidth-2, iface.Type, stateWidth-2, iface.State, addrWidth-2, iface.Address, speedWidth-2, iface.Speed)
+		}
+
+		printBorder(nameWidth, typeWidth, stateWidth, addrWidth, speedWidth, "└", "┴", "┘")
 	},
+}
+
+func printBorder(w1, w2, w3, w4, w5 int, left, middle, right string) {
+	fmt.Print(left)
+	fmt.Print(strings.Repeat("─", w1))
+	fmt.Print(middle)
+	fmt.Print(strings.Repeat("─", w2))
+	fmt.Print(middle)
+	fmt.Print(strings.Repeat("─", w3))
+	fmt.Print(middle)
+	fmt.Print(strings.Repeat("─", w4))
+	fmt.Print(middle)
+	fmt.Print(strings.Repeat("─", w5))
+	fmt.Println(right)
+}
+
+func padRight(s string, length int) string {
+	if len(s) > length {
+		return s
+	}
+	return s + strings.Repeat(" ", length-len(s))
 }
 
 func getNetworkInterfaces() ([]NetworkInterface, error) {
@@ -88,16 +142,16 @@ func getNetworkInterfaces() ([]NetworkInterface, error) {
 		if name, ok := addr["ifname"].(string); ok {
 			linkInfo := linkMap[name]
 
-			ifType := "ethernet"
-			if name == "lo" {
-				ifType = "loopback"
-			} else if strings.HasPrefix(name, "br-") {
-				ifType = "bridge"
-			} else if strings.HasPrefix(name, "veth") {
-				ifType = "veth"
-			} else if strings.HasPrefix(name, "wg") {
-				ifType = "wireguard"
-			}
+		ifType := "ethernet"
+		if name == "lo" {
+			ifType = "loopback"
+		} else if name == "docker0" || strings.HasPrefix(name, "br-") {
+			ifType = "bridge"
+		} else if strings.HasPrefix(name, "veth") {
+			ifType = "veth"
+		} else if strings.HasPrefix(name, "wg") {
+			ifType = "wireguard"
+		}
 
 			state := "unknown"
 			if linkInfo != nil {
@@ -226,7 +280,7 @@ var networkSetCmd = &cobra.Command{
 		if dryRun {
 			output.NewInfo(map[string]interface{}{
 				"interface": iface,
-				"dry_run":  true,
+				"dry_run":   true,
 				"commands":  commands,
 			}).Print()
 			return
