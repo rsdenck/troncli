@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -105,10 +106,28 @@ var protonVpnLoginCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		username, _ := cmd.Flags().GetString("username")
 		password, _ := cmd.Flags().GetString("password")
-		if username == "" || password == "" {
-			output.NewError("Username and password required (use --username and --password flags)", "PROTON_LOGIN_MISSING").Print()
+		passwordStdin, _ := cmd.Flags().GetBool("password-stdin")
+
+		if username == "" {
+			output.NewError("Username required (use --username flag)", "PROTON_LOGIN_MISSING").Print()
 			return
 		}
+
+		if passwordStdin {
+			// Read password from stdin (safe from shell interpretation)
+			data, err := io.ReadAll(os.Stdin)
+			if err != nil {
+				output.NewError("Failed to read password from stdin", "PROTON_LOGIN_ERROR").Print()
+				return
+			}
+			password = strings.TrimSpace(string(data))
+		}
+
+		if password == "" {
+			output.NewError("Password required (use --password flag or --password-stdin)", "PROTON_LOGIN_MISSING").Print()
+			return
+		}
+
 		// Simple simulation: store in memory (or could save to config)
 		// For real implementation, use SRP authentication via go-srp
 		output.NewSuccess(map[string]interface{}{
@@ -267,7 +286,8 @@ func init() {
 	protonVpnCmd.AddCommand(protonVpnLoginCmd)
 	protonVpnCmd.AddCommand(protonVpnListCmd)
 	protonVpnLoginCmd.Flags().String("username", "", "Proton username")
-	protonVpnLoginCmd.Flags().String("password", "", "Proton password")
+	protonVpnLoginCmd.Flags().String("password", "", "Proton password (unsafe for special chars)")
+	protonVpnLoginCmd.Flags().Bool("password-stdin", false, "Read password from stdin (safe for special chars)")
 
 	// Add Open subcommands
 	protonOpenCmd.AddCommand(protonOpenMailCmd)
