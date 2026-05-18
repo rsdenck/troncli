@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -91,9 +92,10 @@ var wgStatusCmd = &cobra.Command{
 
 var wgListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all WireGuard interfaces",
+	Short: "List all WireGuard interfaces and available tunnels",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Try kernel via wgctrl first
+		hasContent := false
+
 		client, err := wgctrl.New()
 		if err == nil {
 			defer client.Close()
@@ -111,28 +113,59 @@ var wgListCmd = &cobra.Command{
 					rows = append(rows, []string{d.Name, pubKey, fmt.Sprintf("%d", d.ListenPort), peers, status})
 				}
 				output.PrintCompactTable(headers, rows)
-				return
+				hasContent = true
 			}
-			_ = devices
 		}
 
-		// Fallback: try `wg show` CLI
-		out, err := exec.Command("wg", "show", "interfaces").CombinedOutput()
-		if err != nil {
-			output.NewInfo("No WireGuard interfaces found").Print()
-			return
+		if !hasContent {
+			out, err := exec.Command("wg", "show", "interfaces").CombinedOutput()
+			if err == nil {
+				interfaces := strings.Fields(strings.TrimSpace(string(out)))
+				if len(interfaces) > 0 {
+					headers := []string{"INTERFACE"}
+					var rows [][]string
+					for _, iface := range interfaces {
+						rows = append(rows, []string{iface})
+					}
+					output.PrintCompactTable(headers, rows)
+					hasContent = true
+				}
+			}
 		}
-		interfaces := strings.Fields(strings.TrimSpace(string(out)))
-		if len(interfaces) == 0 {
-			output.NewInfo("No WireGuard interfaces found").Print()
-			return
+
+		if !hasContent {
+			fmt.Println("WireGuard interfaces: none")
 		}
-		headers := []string{"INTERFACE"}
-		var rows [][]string
-		for _, iface := range interfaces {
-			rows = append(rows, []string{iface})
+
+		// List available tunnel configs from ~/.nux/tunnels/
+		home, _ := os.UserHomeDir()
+		tunnelsDir := filepath.Join(home, ".nux", "tunnels")
+		entries, err := os.ReadDir(tunnelsDir)
+		if err == nil {
+			var ovpns []string
+			for _, e := range entries {
+				if !e.IsDir() && (strings.HasSuffix(e.Name(), ".ovpn") || strings.HasSuffix(e.Name(), ".conf")) {
+					ovpns = append(ovpns, e.Name())
+				}
+			}
+			if len(ovpns) > 0 {
+				fmt.Println()
+				fmt.Printf("Available tunnel configs (%d):\n", len(ovpns))
+				headers := []string{"TUNNEL", "TYPE", "FILE"}
+				var rows [][]string
+				for _, name := range ovpns {
+					ttype := "OpenVPN"
+					if strings.HasSuffix(name, ".conf") {
+						ttype = "WireGuard"
+					}
+					rows = append(rows, []string{strings.TrimSuffix(name, filepath.Ext(name)), ttype, name})
+				}
+				output.PrintCompactTable(headers, rows)
+				fmt.Println()
+				fmt.Println("Use: nux tunnel connect <name>  to connect an OpenVPN tunnel")
+				fmt.Println("Use: nux wg connect <name>      to connect a WireGuard tunnel")
+			}
 		}
-		output.PrintCompactTable(headers, rows)
 	},
 }
 
