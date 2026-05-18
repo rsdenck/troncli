@@ -2,7 +2,8 @@ version: 2
 project_name: nux
 
 builds:
-  - main: ./cmd/nux
+  - id: nux
+    main: ./cmd/nux
     env:
       - CGO_ENABLED=0
     goos:
@@ -12,8 +13,17 @@ builds:
       - amd64
       - arm64
       - arm
+      - 386
+      - riscv64
     goarm:
       - 7
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: darwin
+        goarch: arm
+      - goos: darwin
+        goarch: riscv64
     flags:
       - -trimpath
     ldflags:
@@ -23,13 +33,15 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - formats: 
+  - id: nux-archive
+    formats:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     files:
       - LICENSE
       - README.md
       - docs/
+    wrap_in_directory: false
 
 checksum:
   name_template: 'checksums.txt'
@@ -46,16 +58,22 @@ changelog:
       - '^test:'
       - '^chore:'
 
-nfpm:
-  - file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+nfpms:
+  - id: packages
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     homepage: https://github.com/rsdenck/nux
     maintainer: "Ranlens Denck <piptr@protonmail.com>"
-    description: "NUX - Production-Grade Linux CLI Manager"
-    license: "MIT"
+    description: |-
+      NUX - Production-Grade Linux CLI Manager
+      A comprehensive CLI for Linux system administration,
+      offering real-time monitoring, disk management, security auditing,
+      service and network management, AI agent integration, and more.
+    license: MIT
     formats:
       - deb
       - rpm
       - apk
+      - archlinux
     bindir: /usr/local/bin
     contents:
       - src: LICENSE
@@ -64,6 +82,23 @@ nfpm:
         dst: /usr/share/doc/nux/README.md
       - src: docs/index.html
         dst: /usr/share/nux/docs/index.html
+    overrides:
+      rpm:
+        dependencies:
+          - iproute2
+          - nftables
+      deb:
+        dependencies:
+          - iproute2
+          - nftables
+      archlinux:
+        dependencies:
+          - iproute2
+          - nftables
+      apk:
+        dependencies:
+          - iproute2
+          - nftables
 
 release:
   draft: false
@@ -71,3 +106,17 @@ release:
   github:
     owner: rsdenck
     name: nux
+  header: |
+    ## NUX {{ .Version }} - Production-Grade Linux CLI Manager
+    
+    ### Installation
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/rsdenck/nux/main/src/install_nux.sh | bash
+    ```
+    
+    ### Changelog
+  footer: |
+    ### Checksums
+    ```
+    {{ .Checksums }}
+    ```

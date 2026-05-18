@@ -6,26 +6,25 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v4
-    
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.24'
         cache: true
-    
     - name: Install dependencies
       run: go mod download
-    
     - name: Run unit tests
       run: go test ./... -v -coverprofile=coverage.txt -covermode=atomic
-    
     - name: Upload coverage
       uses: codecov/codecov-action@v5
       with:
@@ -33,47 +32,49 @@ jobs:
         fail_ci_if_error: false
 
   build:
-    name: Build
+    name: Build (${{ matrix.goos }}/${{ matrix.goarch }}${{ matrix.goarm }})
     runs-on: ubuntu-latest
-    
     strategy:
       matrix:
         goos: [linux, darwin]
-        goarch: [amd64, arm64]
-    
+        goarch: [amd64, arm64, arm, 386, riscv64]
+        exclude:
+          - goos: darwin
+            goarch: arm
+          - goos: darwin
+            goarch: 386
+          - goos: darwin
+            goarch: riscv64
     steps:
     - uses: actions/checkout@v4
-    
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.24'
-    
     - name: Build binary
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
+        GOARM: 7
       run: |
-        go build -v -o nux-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/nux
-    
+        GOARM=""
+        if [ "${{ matrix.goarch }}" = "arm" ]; then GOARM=7; fi
+        go build -v -ldflags="-s -w" -o nux-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarch == 'arm' && 'v7' || '' }} ./cmd/nux
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: nux-${{ matrix.goos }}-${{ matrix.goarch }}
-        path: nux-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: nux-*
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v4
-    
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.24'
-    
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v6
       with:
@@ -83,11 +84,21 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v4
-    
     - name: Run Gosec Security Scanner
       uses: securego/gosec@master
       with:
         args: ./...
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: fs
+        scan-ref: .
+        format: sarif
+        output: trivy-results.sarif
+    - name: Upload Trivy results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: trivy-results.sarif
+        category: trivy
